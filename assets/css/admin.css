@@ -1,0 +1,564 @@
+/**
+ * Ryvr Admin Styles
+ */
+
+/* Global Admin Styles */
+.ryvr-admin-header {
+    margin-bottom: 20px;
+}
+
+/* Grid Layout for Connectors */
+.ryvr-connectors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+/* Connector Cards */
+.ryvr-connector-card {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: box-shadow 0.3s ease;
+}
+
+.ryvr-connector-card:hover {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.ryvr-connector-header {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ryvr-connector-icon {
+    width: 32px;
+    height: 32px;
+}
+
+.ryvr-connector-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.ryvr-connector-content {
+    padding: 15px;
+}
+
+.ryvr-connector-description {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #666;
+    font-size: 14px;
+}
+
+.ryvr-connector-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Modal Styles */
+.ryvr-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ryvr-modal-content {
+    background-color: #fff;
+    width: 100%;
+    max-width: 600px;
+    border-radius: 4px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.ryvr-modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ryvr-modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.ryvr-modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    color: #666;
+}
+
+.ryvr-modal-body {
+    padding: 20px;
+}
+
+/* Form Styles */
+.ryvr-form-field {
+    margin-bottom: 15px;
+}
+
+.ryvr-form-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.ryvr-form-field input {
+    width: 100%;
+}
+
+.ryvr-form-field .description {
+    margin-top: 5px;
+    color: #666;
+    font-size: 12px;
+}
+
+.ryvr-form-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+/* Loading Indicator */
+.ryvr-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 30px;
+}
+
+.ryvr-loading .spinner {
+    float: none;
+    margin: 0 0 10px 0;
+}
+
+/* Notice Styles */
+.ryvr-notice {
+    padding: 12px;
+    margin: 15px 0;
+    border-radius: 3px;
+}
+
+.ryvr-notice-info {
+    background-color: #e5f5fa;
+    border-left: 4px solid #00a0d2;
+}
+
+.ryvr-notice-success {
+    background-color: #ecf7ed;
+    border-left: 4px solid #46b450;
+}
+
+.ryvr-notice-warning {
+    background-color: #fff8e5;
+    border-left: 4px solid #ffb900;
+}
+
+.ryvr-notice-error {
+    background-color: #fde8e8;
+    border-left: 4px solid #dc3232;
+}
+
+/* Dashboard Widgets */
+.ryvr-dashboard-widgets {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.ryvr-dashboard-widget {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.ryvr-dashboard-widget-header {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.ryvr-dashboard-widget-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.ryvr-dashboard-widget-content {
+    padding: 15px;
+}
+
+/* Workflow Editor */
+.ryvr-workflow-editor {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    padding: 20px;
+}
+
+/* Settings Page */
+.ryvr-settings-form {
+    max-width: 800px;
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* General */
+.ryvr-notice {
+    padding: 12px;
+    margin: 15px 0;
+    border-radius: 3px;
+}
+
+.ryvr-notice-info {
+    background-color: #e5f5fa;
+    border-left: 4px solid #00a0d2;
+}
+
+.ryvr-notice-success {
+    background-color: #ecf7ed;
+    border-left: 4px solid #46b450;
+}
+
+.ryvr-notice-warning {
+    background-color: #fff8e5;
+    border-left: 4px solid #ffb900;
+}
+
+.ryvr-notice-error {
+    background-color: #fde8e8;
+    border-left: 4px solid #dc3232;
+}
+
+/* Modal */
+.ryvr-modal {
+    display: none;
+    position: fixed;
+    z-index: 100000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.ryvr-modal-content {
+    position: relative;
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 0;
+    border: 1px solid #888;
+    width: 70%;
+    max-width: 800px;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    animation-name: ryvr-modal-animation;
+    animation-duration: 0.4s;
+}
+
+@keyframes ryvr-modal-animation {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ryvr-modal-header {
+    padding: 15px;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ryvr-modal-header h2 {
+    margin: 0;
+    padding: 0;
+}
+
+.ryvr-modal-close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
+}
+
+.ryvr-modal-close:hover,
+.ryvr-modal-close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.ryvr-modal-body {
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* Connectors */
+.ryvr-connectors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.ryvr-connector-card {
+    border: 1px solid #e5e5e5;
+    border-radius: 3px;
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.ryvr-connector-header {
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    background-color: #f9f9f9;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.ryvr-connector-icon {
+    width: 32px;
+    height: 32px;
+    margin-right: 10px;
+}
+
+.ryvr-connector-title {
+    margin: 0;
+    font-size: 16px;
+}
+
+.ryvr-connector-content {
+    padding: 15px;
+}
+
+.ryvr-connector-description {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.ryvr-connector-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Forms */
+.ryvr-form-field {
+    margin-bottom: 15px;
+}
+
+.ryvr-form-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.ryvr-form-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+/* Status indicators */
+.ryvr-status-active {
+    color: #46b450;
+    font-weight: 600;
+}
+
+.ryvr-status-inactive {
+    color: #dc3232;
+    font-weight: 600;
+}
+
+.ryvr-status-pending {
+    color: #ffb900;
+    font-weight: 600;
+}
+
+/* Loading indicator */
+.ryvr-loading {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.ryvr-loading .spinner {
+    float: none;
+    margin-right: 10px;
+}
+
+/* Workflows */
+.ryvr-workflow-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.ryvr-workflow-editor-header {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.ryvr-workflow-editor-body {
+    display: flex;
+    gap: 20px;
+}
+
+.ryvr-workflow-editor-main {
+    flex: 3;
+}
+
+.ryvr-workflow-editor-sidebar {
+    flex: 1;
+    min-width: 250px;
+}
+
+.ryvr-panel {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+    margin-bottom: 20px;
+    padding: 15px;
+}
+
+.ryvr-panel h3 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.ryvr-code-editor-container {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+    padding: 15px;
+}
+
+.ryvr-code-editor {
+    width: 100%;
+    min-height: 500px;
+    font-family: Consolas, Monaco, monospace;
+    line-height: 1.5;
+}
+
+.CodeMirror {
+    height: 500px;
+    border: 1px solid #ddd;
+}
+
+.ryvr-connector-list {
+    margin: 0;
+    padding: 0;
+}
+
+.ryvr-connector-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.ryvr-connector-icon {
+    width: 24px;
+    height: 24px;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    margin-right: 10px;
+}
+
+.ryvr-connector-name {
+    flex: 1;
+}
+
+.ryvr-actions-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ryvr-action-item {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.ryvr-action-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.ryvr-doc-section {
+    margin-bottom: 15px;
+}
+
+.ryvr-doc-section h4 {
+    margin: 0 0 5px 0;
+}
+
+.ryvr-doc-section ul {
+    margin: 0 0 10px 20px;
+}
+
+.ryvr-code-output {
+    background: #f5f5f5;
+    padding: 10px;
+    overflow: auto;
+    max-height: 300px;
+    border: 1px solid #ddd;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .ryvr-workflow-editor-body {
+        flex-direction: column;
+    }
+    
+    .ryvr-workflow-editor-sidebar {
+        min-width: 100%;
+    }
+    
+    .ryvr-modal-content {
+        width: 90%;
+    }
+} 

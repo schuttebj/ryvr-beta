@@ -1,0 +1,50 @@
+---
+description: This is the standards for thedatabase security
+globs: 
+alwaysApply: false
+---
+# Database & Security Standards
+
+## Database
+- Table names: snake_case with `ryvr_` prefix (`ryvr_workflows`)
+- Column names: snake_case (`created_at`, `user_id`)
+- Use WordPress functions for queries
+- Implement appropriate indexes
+- Batch operations where possible
+
+## Database Tables
+```sql
+-- Core Tables
+wp_ryvr_workflows
+wp_ryvr_tasks
+wp_ryvr_runs
+wp_ryvr_logs
+wp_ryvr_api_keys
+wp_ryvr_settings
+```
+
+## Security
+- Never store plaintext credentials
+- Use WordPress encryption functions
+- Implement nonces for AJAX requests
+- Validate all input data
+- Validate API responses before processing
+- Use HTTPS for all API requests
+
+## Example Security Implementation
+```php
+// Check user capabilities before processing
+if (!current_user_can('manage_ryvr_workflows')) {
+    wp_die(__('You do not have permission to access this page.', 'ryvr'));
+}
+
+// Use nonces for form submissions
+wp_nonce_field('ryvr_save_workflow', 'ryvr_workflow_nonce');
+
+// Verify nonces when processing
+if (!isset($_POST['ryvr_workflow_nonce']) || 
+    !wp_verify_nonce($_POST['ryvr_workflow_nonce'], 'ryvr_save_workflow')) {
+    wp_die(__('Security check failed.', 'ryvr'));
+}
+```
+

@@ -1,0 +1,68 @@
+---
+description: This is the project structure.
+globs: 
+alwaysApply: false
+---
+# Project Structure & Organization
+
+## Directory Structure
+```
+ryvr-core/
+├─ src/
+│   ├─ Connectors/
+│   │   └─ [ConnectorName]Connector.php
+│   ├─ Engine/
+│   │   ├─ Context.php
+│   │   └─ Runner.php
+│   ├─ Workflows/
+│   │   └─ (YAML templates)
+│   └─ RyvrServiceProvider.php
+├─ assets/
+│   └─ editor.js
+├─ ryvr-core.php
+└─ composer.json
+```
+
+## Design Principles
+- Each connector should be a standalone class
+- Separate business logic from presentation
+- Create reusable utilities where appropriate
+- Follow SOLID principles, especially single responsibility
+
+## Workflow Definition (YAML/JSON)
+```json
+{
+  "id": "workflow_id",
+  "title": "Workflow Name",
+  "trigger": { 
+    "type": "cron|webhook",
+    "expr": "cron_expression"
+  },
+  "on_error": "abort|retry|fallback|notify",
+  "steps": [
+    {
+      "id": "step_id",
+      "type": "read|reason|write",
+      "connector": "connector_name",
+      "op": "operation_name",
+      "params": {},
+      "template": "template_string"
+    }
+  ],
+  "edges": [["step1", "step2"]]
+}
+```
+
+## Git Workflow
+- `main`: Production-ready code
+- `dev`: Main development branch
+- Feature branches: `feature/feature-name`
+- Bug fixes: `fix/bug-description`
+
+## Commit Messages
+```
+feat: Add DataForSEO connector implementation (#12)
+fix: Resolve API rate limiting issues on OpenAI connector (#15)
+docs: Update workflow creation documentation
+```
+

@@ -1,0 +1,56 @@
+---
+description: This is the phases of the project
+globs: 
+alwaysApply: false
+---
+# Implementation Phases & Task Prioritization
+
+## Development Priority
+1. Basic UI framework
+2. Core integrations
+3. Workflow engine
+4. Testing framework
+5. UI styling and refinement
+
+## Phase 1: Foundation (Weeks 1-10)
+
+### Initial Setup (Weeks 1-2)
+- Initialize plugin structure
+- Set up Composer dependencies
+- Create database tables
+- Implement basic security framework
+
+### Connector Framework (Weeks 3-4)
+- Implement RyvrConnectorInterface
+- Create base connector class
+- Implement authentication handling
+- Set up error handling framework
+- Create DataForSEO connector
+- Create OpenAI connector
+
+### Workflow Engine (Weeks 5-6)
+- Implement workflow definition parser
+- Create workflow execution engine
+- Implement step execution logic
+- Set up Action Scheduler integration
+
+### Basic UI & Tasks (Weeks 7-10)
+- Create workflow list interface
+- Implement basic JSON editor
+- Create task execution interface
+- Implement first 9 core tasks (T-01 → T-09)
+
+## Phase 2: Enhancement (Weeks 11-22)
+
+- React-Flow integration
+- Write policies & approval queue
+- Additional connectors
+- Agency features
+
+## Phase 3: Advanced Features (Weeks 23+)
+
+- Marketplace
+- Vector store & AI
+- Advanced integration
+- Polish & scale
+

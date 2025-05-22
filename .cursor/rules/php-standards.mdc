@@ -1,0 +1,60 @@
+---
+description: This is the standards for the PHP standards
+globs: 
+alwaysApply: false
+---
+# PHP Coding Standards
+
+## Style & Formatting
+- **PSR-12** compliant code
+- 4 spaces for indentation, no tabs
+- Maximum line length of 120 characters
+- Use type declarations (PHP 8.2)
+- Prefer strict typing (`declare(strict_types=1)`)
+- Single quotes for strings unless interpolation is needed
+- Always use braces for control structures
+- Use full PHP tags (`<?php`)
+
+## Naming Conventions
+- **Classes**: PascalCase, descriptive nouns (`DataForSEOConnector`)
+- **Interfaces**: PascalCase, suffixed with Interface (`RyvrConnectorInterface`) 
+- **Methods**: camelCase, start with verb (`fetchData()`)
+- **Properties**: camelCase (`$apiKey`)
+- **Constants**: UPPER_SNAKE_CASE (`API_ENDPOINT`)
+
+## Documentation
+- Every class, method, and property needs a DocBlock
+- Include `@param`, `@return`, `@throws`, and `@since` tags
+- Explain "why" not "what" in comments
+
+## Example
+```php
+<?php
+declare(strict_types=1);
+
+namespace Ryvr\Connectors;
+
+/**
+ * DataForSEO connector implementation.
+ * 
+ * @since 1.0.0
+ */
+class DataForSEOConnector implements RyvrConnectorInterface
+{
+    private string $apiKey;
+    
+    /**
+     * Initialize the connector with authentication metadata.
+     *
+     * @param array $authMeta Authentication credentials
+     * @return void
+     *
+     * @since 1.0.0
+     */
+    public function init(array $authMeta): void
+    {
+        $this->apiKey = $authMeta['api_key'] ?? '';
+    }
+}
+```
+

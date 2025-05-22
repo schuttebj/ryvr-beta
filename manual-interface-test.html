@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ryvr Connector Interface Test</title>
+    <link rel="stylesheet" href="assets/css/admin.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            background-color: #f0f0f1;
+            color: #3c434a;
+            margin: 20px;
+        }
+
+        .wrap {
+            margin: 10px 20px 0 2px;
+            max-width: 1200px;
+        }
+
+        /* WordPress-like Styles */
+        .button {
+            display: inline-block;
+            text-decoration: none;
+            font-size: 13px;
+            line-height: 2.15384615;
+            min-height: 30px;
+            margin: 0;
+            padding: 0 10px;
+            cursor: pointer;
+            border-width: 1px;
+            border-style: solid;
+            -webkit-appearance: none;
+            border-radius: 3px;
+            white-space: nowrap;
+            box-sizing: border-box;
+            color: #2271b1;
+            border-color: #2271b1;
+            background: #f6f7f7;
+        }
+
+        .button:hover {
+            background: #f0f0f1;
+            border-color: #0a4b78;
+            color: #0a4b78;
+        }
+
+        .button-primary {
+            background: #2271b1;
+            border-color: #2271b1;
+            color: #fff;
+        }
+
+        .button-primary:hover {
+            background: #135e96;
+            border-color: #135e96;
+            color: #fff;
+        }
+
+        /* Test Controls */
+        .test-controls {
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .test-section {
+            margin-bottom: 20px;
+        }
+
+        .test-results {
+            background-color: #fff;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .spinner {
+            background: url('data:image/gif;base64,R0lGODlhEAAQAPQAAP///wAAAPj4+Dg4OISEhAYGBiYmJtbW1qioqBYWFnZ2dmZmZuTk5JiYmMbGxkhISFZWVgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh/hpDcmVhdGVkIHdpdGggYWpheGxvYWQuaW5mbwAh+QQJCgAAACwAAAAAEAAQAAAFUCAgjmRpnqUwFGwhKoRgqq2YFMaRGjWA8AbZiIBbjQQ8AmmFUJEQhQGJhaKOrCksgEla+KIkYvC6SJKQOISoNSYdeIk1ayA8ExTyeR3F749CACH5BAkKAAAALAAAAAAQABAAAAVoICCKR9KMaCoaxeCoqEAkRX3AwMHWxQIIjJSAZWgUEgzBwCBAEQpMwIDwY1FHgwJCtOW2UDWYIDyqNVVkUbYr6CK+o2eUMKgWrqKhj0FrEM8jQQALPFA3MAc8CQSAMA5ZBjgqDQmHIyEAIfkECQoAAAAsAAAAABAAEAAABWAgII4j85Ao2hRIKgrEUBQJLaSHMe8zgQo6Q8sxS7RIhILhBkgumCTZsXkACBC+0cwF2GoLLoFXREDcDlkAojBICRaFLDCOQtQKjmsQSubtDFU/NXcDBHwkaw1cKQ8MiyEAIfkECQoAAAAsAAAAABAAEAAABVIgII5kaZ6AIJQCMRTFQKiDQx4GrBfGa4uCnAEhQuRgPwCBtwK+kCNFgjh6QlFYgGO7baJ2CxIioSDpwqNggWCGDVVGphly3BkOpXDrKfNm/4AhACH5BAkKAAAALAAAAAAQABAAAAVgICCOZGmeqEAMRTEQwskYbV0Yx7kYSIzQhtgoBxCKBDQCIOcoLBimRiFhSABYU5gIgW01pLUBYkRItAYAqrlhYiwKjiWAcDMWY8QjsCf4DewiBzQ2N1AmKlgvgCiMjSQhACH5BAkKAAAALAAAAAAQABAAAAVfICCOZGmeqEgUxUAIpkA0AMKyxkEiSZEIsJqhYAg+boUFSTAkiBiNHks3sg1ILAfBiS10gyqCg0UaFBCkwy3RYKiIYMAC+RAxiQgYsJdAjw5DN2gILzEEZgVcKYuMJiEAOwAAAAAAAAAAAA==');
+            display: inline-block;
+            visibility: visible;
+            float: right;
+            width: 20px;
+            height: 20px;
+            margin: 4px 10px 0;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>Ryvr Connector Interface Test</h1>
+        
+        <div class="test-controls">
+            <h2>Interface Testing</h2>
+            <div class="test-section">
+                <button id="btn-load-connectors" class="button button-primary">Load Connector Cards</button>
+                <button id="btn-show-modal" class="button">Show Modal</button>
+                <button id="btn-hide-modal" class="button">Hide Modal</button>
+                <button id="btn-toggle-loading" class="button">Toggle Loading</button>
+                <span id="loading-indicator" class="spinner" style="display: none;"></span>
+            </div>
+        </div>
+        
+        <div id="test-output" class="test-results">
+            <p>Test results will appear here...</p>
+        </div>
+        
+        <div class="ryvr-connectors-grid" id="connectors-container">
+            <!-- Connector cards will be added here -->
+        </div>
+        
+        <!-- Configure Connector Modal -->
+        <div id="ryvr-connector-modal" class="ryvr-modal" style="display: none;">
+            <div class="ryvr-modal-content">
+                <div class="ryvr-modal-header">
+                    <h2 id="ryvr-connector-modal-title">Connector Configuration</h2>
+                    <button type="button" class="ryvr-modal-close">&times;</button>
+                </div>
+                
+                <div class="ryvr-modal-body">
+                    <div id="ryvr-connector-auth-form">
+                        <div class="ryvr-loading" style="display: none;">
+                            <span class="spinner is-active"></span>
+                            <p>Loading...</p>
+                        </div>
+                        
+                        <form id="ryvr-auth-form">
+                            <div id="ryvr-auth-fields">
+                                <!-- OpenAI fields -->
+                                <div id="openai-fields" style="display: none;">
+                                    <div class="ryvr-form-field">
+                                        <label for="ryvr-auth-api_key">API Key</label>
+                                        <input type="password" id="ryvr-auth-api_key" name="api_key" class="regular-text" placeholder="sk-...">
+                                        <p class="description">Your OpenAI API key.</p>
+                                    </div>
+                                    
+                                    <div class="ryvr-form-field">
+                                        <label for="ryvr-auth-organization_id">Organization ID</label>
+                                        <input type="text" id="ryvr-auth-organization_id" name="organization_id" class="regular-text" placeholder="org-...">
+                                        <p class="description">Your OpenAI organization ID (optional).</p>
+                                    </div>
+
+                                    <div class="ryvr-form-field">
+                                        <label for="ryvr-auth-custom_endpoint">Custom API Endpoint</label>
+                                        <input type="text" id="ryvr-auth-custom_endpoint" name="custom_endpoint" class="regular-text" placeholder="https://api.example.com/v1">
+                                        <p class="description">Custom API endpoint URL (for testing or specific deployments).</p>
+                                    </div>
+                                </div>
+
+                                <!-- DataForSEO fields -->
+                                <div id="dataforseo-fields" style="display: none;">
+                                    <div class="ryvr-form-field">
+                                        <label for="ryvr-auth-login">Login</label>
+                                        <input type="text" id="ryvr-auth-login" name="login" class="regular-text">
+                                        <p class="description">Your DataForSEO API login.</p>
+                                    </div>
+                                    
+                                    <div class="ryvr-form-field">
+                                        <label for="ryvr-auth-password">Password</label>
+                                        <input type="password" id="ryvr-auth-password" name="password" class="regular-text">
+                                        <p class="description">Your DataForSEO API password.</p>
+                                    </div>
+
+                                    <div class="ryvr-form-field">
+                                        <input type="checkbox" id="ryvr-auth-use_sandbox" name="use_sandbox">
+                                        <label for="ryvr-auth-use_sandbox">Use Sandbox</label>
+                                        <p class="description">Enable to use DataForSEO sandbox environment for testing.</p>
+                                    </div>
+                                </div>
+
+                                <!-- Default fields (shown before a connector is selected) -->
+                                <div id="default-fields">
+                                    <p>Select a connector to configure</p>
+                                </div>
+                            </div>
+                            
+                            <div class="ryvr-form-actions">
+                                <button type="button" class="button button-primary ryvr-save-auth">
+                                    Save Credentials
+                                </button>
+                                
+                                <button type="button" class="button ryvr-test-auth">
+                                    Test Connection
+                                </button>
+                                
+                                <button type="button" class="button ryvr-delete-auth">
+                                    Delete Credentials
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Sample connectors data
+        const connectors = [
+            {
+                id: 'openai',
+                name: 'OpenAI',
+                description: 'Integrate with OpenAI\'s API for content generation, text completion, and more.',
+                icon_url: 'assets/images/connectors/openai.svg'
+            },
+            {
+                id: 'dataforseo',
+                name: 'DataForSEO',
+                description: 'Access SEO data including rankings, keywords, and competitive analysis.',
+                icon_url: 'assets/images/connectors/dataforseo.svg'
+            }
+        ];
+        
+        // Get DOM elements
+        const connectorsContainer = document.getElementById('connectors-container');
+        const loadConnectorsBtn = document.getElementById('btn-load-connectors');
+        const showModalBtn = document.getElementById('btn-show-modal');
+        const hideModalBtn = document.getElementById('btn-hide-modal');
+        const toggleLoadingBtn = document.getElementById('btn-toggle-loading');
+        const modal = document.getElementById('ryvr-connector-modal');
+        const modalLoading = document.querySelector('.ryvr-loading');
+        const modalClose = document.querySelector('.ryvr-modal-close');
+        const testOutput = document.getElementById('test-output');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        
+        // Log to test output
+        function log(message) {
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString();
+            testOutput.innerHTML += `<p>[${timestamp}] ${message}</p>`;
+            testOutput.scrollTop = testOutput.scrollHeight;
+        }
+        
+        // Event listeners
+        loadConnectorsBtn.addEventListener('click', loadConnectorCards);
+        showModalBtn.addEventListener('click', showModal);
+        hideModalBtn.addEventListener('click', hideModal);
+        toggleLoadingBtn.addEventListener('click', toggleLoading);
+        modalClose.addEventListener('click', hideModal);
+        
+        // Click outside modal to close
+        window.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                hideModal();
+            }
+        });
+        
+        // When a configure button is clicked
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('ryvr-connector-configure')) {
+                const connectorId = e.target.dataset.connectorId;
+                showModal();
+                showConnectorFields(connectorId);
+                log(`Configure clicked for connector ID: ${connectorId}`);
+            }
+        });
+        
+        // Show the appropriate connector fields
+        function showConnectorFields(connectorId) {
+            // Hide all field sets
+            document.getElementById('openai-fields').style.display = 'none';
+            document.getElementById('dataforseo-fields').style.display = 'none';
+            document.getElementById('default-fields').style.display = 'none';
+            
+            // Show the fields for the selected connector
+            if (connectorId === 'openai') {
+                document.getElementById('openai-fields').style.display = 'block';
+                document.getElementById('ryvr-connector-modal-title').textContent = 'Configure OpenAI';
+            } else if (connectorId === 'dataforseo') {
+                document.getElementById('dataforseo-fields').style.display = 'block';
+                document.getElementById('ryvr-connector-modal-title').textContent = 'Configure DataForSEO';
+            } else {
+                document.getElementById('default-fields').style.display = 'block';
+                document.getElementById('ryvr-connector-modal-title').textContent = 'Configure Connector';
+            }
+        }
+        
+        // When a test connection button is clicked
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('ryvr-connector-test')) {
+                const connectorId = e.target.dataset.connectorId;
+                showModal();
+                modalLoading.style.display = 'flex';
+                log(`Test connection clicked for connector ID: ${connectorId}`);
+                
+                // Simulate API call
+                setTimeout(function() {
+                    modalLoading.style.display = 'none';
+                    log(`Connection test for ${connectorId} completed`);
+                }, 2000);
+            }
+        });
+        
+        // Form action buttons
+        document.querySelector('.ryvr-save-auth').addEventListener('click', function() {
+            log('Save credentials clicked');
+            modalLoading.style.display = 'flex';
+            
+            // Simulate API call
+            setTimeout(function() {
+                modalLoading.style.display = 'none';
+                log('Credentials saved successfully');
+            }, 1500);
+        });
+        
+        document.querySelector('.ryvr-test-auth').addEventListener('click', function() {
+            log('Test connection clicked');
+            modalLoading.style.display = 'flex';
+            
+            // Simulate API call
+            setTimeout(function() {
+                modalLoading.style.display = 'none';
+                log('Connection tested successfully');
+            }, 1500);
+        });
+        
+        document.querySelector('.ryvr-delete-auth').addEventListener('click', function() {
+            log('Delete credentials clicked');
+            if (confirm('Are you sure you want to delete these credentials?')) {
+                modalLoading.style.display = 'flex';
+                
+                // Simulate API call
+                setTimeout(function() {
+                    modalLoading.style.display = 'none';
+                    log('Credentials deleted successfully');
+                }, 1500);
+            }
+        });
+        
+        // Functions
+        function loadConnectorCards() {
+            log('Loading connector cards...');
+            loadingIndicator.style.display = 'inline-block';
+            
+            // Clear container
+            connectorsContainer.innerHTML = '';
+            
+            // Simulate loading delay
+            setTimeout(function() {
+                // Add connector cards
+                connectors.forEach(connector => {
+                    const card = document.createElement('div');
+                    card.className = 'ryvr-connector-card';
+                    card.dataset.connectorId = connector.id;
+                    
+                    card.innerHTML = `
+                        <div class="ryvr-connector-header">
+                            <img src="${connector.icon_url}" alt="${connector.name}" class="ryvr-connector-icon" onerror="this.src='assets/images/default-connector.svg'">
+                            <h3 class="ryvr-connector-title">${connector.name}</h3>
+                        </div>
+                        
+                        <div class="ryvr-connector-content">
+                            <p class="ryvr-connector-description">${connector.description}</p>
+                            
+                            <div class="ryvr-connector-actions">
+                                <button type="button" class="button ryvr-connector-configure" data-connector-id="${connector.id}">
+                                    Configure
+                                </button>
+                                
+                                <button type="button" class="button ryvr-connector-test" data-connector-id="${connector.id}">
+                                    Test Connection
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    connectorsContainer.appendChild(card);
+                });
+                
+                loadingIndicator.style.display = 'none';
+                log('Connector cards loaded successfully');
+            }, 1000);
+        }
+        
+        function showModal() {
+            modal.style.display = 'flex';
+            log('Modal displayed');
+        }
+        
+        function hideModal() {
+            modal.style.display = 'none';
+            log('Modal hidden');
+        }
+        
+        function toggleLoading() {
+            if (modalLoading.style.display === 'none' || modalLoading.style.display === '') {
+                modalLoading.style.display = 'flex';
+                log('Loading indicator shown');
+            } else {
+                modalLoading.style.display = 'none';
+                log('Loading indicator hidden');
+            }
+        }
+        
+        // Initialize the page
+        log('Interface test initialized');
+    </script>
+</body>
+</html> 

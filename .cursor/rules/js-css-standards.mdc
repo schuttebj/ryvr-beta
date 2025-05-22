@@ -1,0 +1,54 @@
+---
+description: This is the standards for the JS and CSS standards
+globs: 
+alwaysApply: false
+---
+# JavaScript & CSS Standards
+
+## JavaScript
+- Use ES6+ features
+- 2 spaces for indentation
+- Prefer `const` over `let`
+- Use semicolons at the end of statements
+- Use arrow functions for anonymous functions
+- Use template literals for string interpolation
+
+## Example JavaScript
+```javascript
+const fetchWorkflow = async (id) => {
+  try {
+    const response = await fetch(`/api/workflows/${id}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Error fetching workflow: ${error.message}`);
+    return null;
+  }
+};
+```
+
+## CSS/SCSS
+- 2 spaces for indentation
+- Use BEM naming convention
+- Prefer SCSS where possible
+- Mobile-first responsive design
+
+## Example SCSS
+```scss
+.workflow {
+  &__header {
+    display: flex;
+    margin-bottom: 1rem;
+    
+    &--active {
+      background-color: $color-success-light;
+    }
+  }
+  
+  &__title {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+}
+```
+
