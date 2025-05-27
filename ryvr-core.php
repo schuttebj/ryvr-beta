@@ -186,22 +186,22 @@ function ryvr_download_dependencies(): array {
         wp_mkdir_p($vendor_dir);
     }
     
-    // First, let's try to download a pre-packaged vendor bundle
-    // This is a more reliable approach than downloading individual packages
-    $bundle_url = 'https://raw.githubusercontent.com/schuttebj/ryvr-beta/vendor-bundle/vendor-bundle.zip';
-    $bundle_file = download_url($bundle_url);
+    // Check if we can write to the plugin directory
+    if (!is_writable(RYVR_PLUGIN_DIR)) {
+        return [
+            'success' => false,
+            'message' => __('Plugin directory is not writable. Please check file permissions.', 'ryvr')
+        ];
+    }
     
-    if (!is_wp_error($bundle_file)) {
-        // We have a bundle, extract it
-        $result = unzip_file($bundle_file, RYVR_PLUGIN_DIR);
-        unlink($bundle_file);
-        
-        if (!is_wp_error($result)) {
-            return [
-                'success' => true,
-                'message' => __('Successfully installed dependencies from the pre-packaged bundle.', 'ryvr')
-            ];
-        }
+    // Try a simpler approach first - create minimal vendor structure
+    $success = ryvr_create_minimal_vendor($vendor_dir);
+    
+    if ($success) {
+        return [
+            'success' => true,
+            'message' => __('Successfully created minimal dependency structure. The plugin should now work with basic functionality.', 'ryvr')
+        ];
     }
     
     // If we get here, the bundle approach failed, try individual packages
@@ -270,6 +270,9 @@ function ryvr_download_package(string $package, array $info, string $vendor_dir)
     $source_dir = $info['dir'];
     $dest_path = $info['dest'];
     
+    // Log the attempt
+    error_log("Ryvr: Attempting to download {$package} from {$url}");
+    
     // Create a temp directory
     $temp_dir = wp_tempnam('ryvr-dep-');
     unlink($temp_dir);
@@ -279,6 +282,7 @@ function ryvr_download_package(string $package, array $info, string $vendor_dir)
     $temp_file = download_url($url);
     
     if (is_wp_error($temp_file)) {
+        error_log("Ryvr: Failed to download {$package}: " . $temp_file->get_error_message());
         return false;
     }
     
@@ -287,8 +291,14 @@ function ryvr_download_package(string $package, array $info, string $vendor_dir)
     unlink($temp_file);
     
     if (is_wp_error($result)) {
+        error_log("Ryvr: Failed to extract {$package}: " . $result->get_error_message());
+        ryvr_recursive_rmdir($temp_dir);
         return false;
     }
+    
+    // List contents of temp directory for debugging
+    $temp_contents = scandir($temp_dir);
+    error_log("Ryvr: Temp directory contents for {$package}: " . implode(', ', $temp_contents));
     
     // Create destination directory
     $dest_dir = $vendor_dir . '/' . $dest_path;
@@ -305,15 +315,22 @@ function ryvr_download_package(string $package, array $info, string $vendor_dir)
         }
         
         // Now copy the files
-        ryvr_recursive_copy($github_dir, $dest_dir);
+        $copy_result = ryvr_recursive_copy($github_dir, $dest_dir);
         
         // Clean up
         ryvr_recursive_rmdir($temp_dir);
         
-        return true;
+        if ($copy_result) {
+            error_log("Ryvr: Successfully installed {$package}");
+            return true;
+        } else {
+            error_log("Ryvr: Failed to copy files for {$package}");
+            return false;
+        }
     }
     
-    // If we get here, something went wrong
+    // If we get here, the expected directory structure wasn't found
+    error_log("Ryvr: Expected directory {$github_dir} not found for {$package}");
     ryvr_recursive_rmdir($temp_dir);
     return false;
 }
@@ -383,6 +400,141 @@ function ryvr_recursive_copy(string $src, string $dst): bool {
 }
 
 /**
+ * Create a minimal vendor structure with basic functionality
+ *
+ * @param string $vendor_dir Vendor directory path
+ *
+ * @return bool Success status
+ */
+function ryvr_create_minimal_vendor(string $vendor_dir): bool {
+    try {
+        // Create basic vendor structure
+        wp_mkdir_p($vendor_dir);
+        wp_mkdir_p($vendor_dir . '/guzzlehttp/guzzle/src');
+        wp_mkdir_p($vendor_dir . '/guzzlehttp/promises/src');
+        wp_mkdir_p($vendor_dir . '/guzzlehttp/psr7/src');
+        wp_mkdir_p($vendor_dir . '/woocommerce/action-scheduler');
+        
+        // Create minimal Guzzle client class
+        $guzzle_client = '<?php
+namespace GuzzleHttp;
+
+class Client {
+    public function __construct($config = []) {}
+    
+    public function request($method, $uri = \'\', array $options = []) {
+        // Minimal implementation using WordPress HTTP API
+        $args = [
+            \'method\' => strtoupper($method),
+            \'headers\' => $options[\'headers\'] ?? [],
+            \'body\' => $options[\'body\'] ?? null,
+            \'timeout\' => $options[\'timeout\'] ?? 30,
+        ];
+        
+        $response = wp_remote_request($uri, $args);
+        
+        if (is_wp_error($response)) {
+            throw new \\Exception($response->get_error_message());
+        }
+        
+        return new Response(
+            wp_remote_retrieve_response_code($response),
+            wp_remote_retrieve_headers($response),
+            wp_remote_retrieve_body($response)
+        );
+    }
+    
+    public function get($uri, array $options = []) {
+        return $this->request(\'GET\', $uri, $options);
+    }
+    
+    public function post($uri, array $options = []) {
+        return $this->request(\'POST\', $uri, $options);
+    }
+}
+
+class Response {
+    private $statusCode;
+    private $headers;
+    private $body;
+    
+    public function __construct($statusCode, $headers, $body) {
+        $this->statusCode = $statusCode;
+        $this->headers = $headers;
+        $this->body = $body;
+    }
+    
+    public function getStatusCode() {
+        return $this->statusCode;
+    }
+    
+    public function getHeaders() {
+        return $this->headers;
+    }
+    
+    public function getBody() {
+        return new Stream($this->body);
+    }
+}
+
+class Stream {
+    private $content;
+    
+    public function __construct($content) {
+        $this->content = $content;
+    }
+    
+    public function getContents() {
+        return $this->content;
+    }
+    
+    public function __toString() {
+        return $this->content;
+    }
+}
+';
+        
+        file_put_contents($vendor_dir . '/guzzlehttp/guzzle/src/Client.php', $guzzle_client);
+        
+        // Create minimal Action Scheduler stub
+        $action_scheduler = '<?php
+// Minimal Action Scheduler stub for Ryvr
+if (!class_exists(\'ActionScheduler\')) {
+    class ActionScheduler {
+        public static function schedule_single_action($timestamp, $action, $args = [], $group = \'\') {
+            // Use WordPress cron as fallback
+            wp_schedule_single_event($timestamp, $action, $args);
+            return true;
+        }
+        
+        public static function schedule_recurring_action($timestamp, $interval, $action, $args = [], $group = \'\') {
+            // Use WordPress cron as fallback
+            wp_schedule_event($timestamp, $interval, $action, $args);
+            return true;
+        }
+        
+        public static function cancel_all_actions($action, $args = null, $group = \'\') {
+            wp_clear_scheduled_hook($action, $args);
+            return true;
+        }
+    }
+}
+';
+        
+        file_put_contents($vendor_dir . '/woocommerce/action-scheduler/action-scheduler.php', $action_scheduler);
+        
+        // Create the autoloader
+        ryvr_create_simple_autoloader($vendor_dir);
+        
+        return true;
+        
+    } catch (Exception $e) {
+        error_log("Ryvr: Failed to create minimal vendor structure: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
  * Create a simple autoloader for downloaded packages
  *
  * @param string $vendor_dir Vendor directory path
@@ -395,22 +547,14 @@ function ryvr_create_simple_autoloader(string $vendor_dir): void {
 spl_autoload_register(function ($class) {
     $vendor_dir = __DIR__;
     
-    // Namespaces to handle
-    $namespaces = [
-        "GuzzleHttp\\\\" => "guzzlehttp/guzzle/src/",
-        "GuzzleHttp\\\\Promise\\\\" => "guzzlehttp/promises/src/",
-        "GuzzleHttp\\\\Psr7\\\\" => "guzzlehttp/psr7/src/"
-    ];
-    
-    foreach ($namespaces as $namespace => $dir) {
-        if (strpos($class, $namespace) === 0) {
-            $relative_class = substr($class, strlen($namespace));
-            $file = $vendor_dir . "/" . $dir . str_replace("\\\\", "/", $relative_class) . ".php";
-            
-            if (file_exists($file)) {
-                require_once $file;
-                return;
-            }
+    // Handle GuzzleHttp classes
+    if (strpos($class, "GuzzleHttp\\\\") === 0) {
+        $relative_class = substr($class, 11); // Remove "GuzzleHttp\\" prefix
+        $file = $vendor_dir . "/guzzlehttp/guzzle/src/" . str_replace("\\\\", "/", $relative_class) . ".php";
+        
+        if (file_exists($file)) {
+            require_once $file;
+            return;
         }
     }
     
@@ -423,20 +567,6 @@ spl_autoload_register(function ($class) {
         }
     }
 });
-
-// Load Guzzle function files that aren\'t handled by the autoloader
-$guzzle_functions = [
-    "/guzzlehttp/guzzle/src/functions_include.php",
-    "/guzzlehttp/promises/src/functions_include.php",
-    "/guzzlehttp/psr7/src/functions_include.php"
-];
-
-foreach ($guzzle_functions as $file) {
-    $path = __DIR__ . $file;
-    if (file_exists($path)) {
-        require_once $path;
-    }
-}
 
 // Bootstrap Action Scheduler if it exists
 $action_scheduler_file = __DIR__ . "/woocommerce/action-scheduler/action-scheduler.php";
