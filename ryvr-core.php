@@ -96,7 +96,7 @@ register_uninstall_hook(RYVR_PLUGIN_FILE, 'ryvr_uninstall');
  */
 function ryvr_init(): void {
     // Check if required PHP version is met
-    if (version_compare(PHP_VERSION, '8.2', '<')) {
+    if (version_compare(PHP_VERSION, '8.0', '<')) {
         add_action('admin_notices', function () {
             echo '<div class="error"><p>' . 
                  sprintf(__('Ryvr requires PHP 8.2 or higher. You are running PHP %s.', 'ryvr'), PHP_VERSION) . 
