@@ -103,6 +103,9 @@ class Manager
     {
         global $wpdb;
         
+        // Load required classes
+        $this->load_workflow_classes();
+        
         // Get all workflows from the database
         $table_name = $wpdb->prefix . 'ryvr_workflows';
         
@@ -149,6 +152,34 @@ class Manager
     }
     
     /**
+     * Load workflow classes.
+     *
+     * @return void
+     *
+     * @since 1.0.0
+     */
+    private function load_workflow_classes(): void
+    {
+        // Load workflow interface
+        $interface_file = RYVR_PLUGIN_DIR . 'src/Workflows/WorkflowInterface.php';
+        if (file_exists($interface_file) && !interface_exists('Ryvr\Workflows\WorkflowInterface')) {
+            require_once $interface_file;
+        }
+        
+        // Load abstract workflow
+        $abstract_file = RYVR_PLUGIN_DIR . 'src/Workflows/AbstractWorkflow.php';
+        if (file_exists($abstract_file) && !class_exists('Ryvr\Workflows\AbstractWorkflow')) {
+            require_once $abstract_file;
+        }
+        
+        // Load JSON workflow
+        $json_file = RYVR_PLUGIN_DIR . 'src/Workflows/JSONWorkflow.php';
+        if (file_exists($json_file) && !class_exists('Ryvr\Workflows\JSONWorkflow')) {
+            require_once $json_file;
+        }
+    }
+    
+    /**
      * Create a workflow from a definition.
      *
      * @param array $definition Workflow definition.
@@ -161,6 +192,9 @@ class Manager
      */
     public function create_workflow(array $definition): WorkflowInterface
     {
+        // Load required classes
+        $this->load_workflow_classes();
+        
         $workflow = new JSONWorkflow($definition, $this->connector_manager);
         
         // Validate the workflow

@@ -68,39 +68,41 @@ $connectors = $connector_manager->get_connectors();
                 </button>
             </div>
 
-            <!-- Visual Builder -->
-            <div id="ryvr-visual-builder" class="ryvr-tab-content active">
-                <div class="ryvr-workflow-canvas-container">
-                    <div class="ryvr-workflow-toolbar">
-                        <div class="ryvr-workflow-info">
-                            <input type="text" id="workflow-name" placeholder="<?php esc_attr_e('Workflow Name', 'ryvr'); ?>" class="ryvr-workflow-name-input">
-                            <textarea id="workflow-description" placeholder="<?php esc_attr_e('Workflow Description', 'ryvr'); ?>" class="ryvr-workflow-description-input"></textarea>
+            <div class="ryvr-workflow-editor-main">
+                <!-- Visual Builder -->
+                <div id="ryvr-visual-builder" class="ryvr-tab-content active">
+                    <div class="ryvr-workflow-canvas-container">
+                        <div class="ryvr-workflow-toolbar">
+                            <div class="ryvr-workflow-info">
+                                <input type="text" id="workflow-name" placeholder="<?php esc_attr_e('Workflow Name', 'ryvr'); ?>" class="ryvr-workflow-name-input">
+                                <textarea id="workflow-description" placeholder="<?php esc_attr_e('Workflow Description', 'ryvr'); ?>" class="ryvr-workflow-description-input"></textarea>
+                            </div>
+                            <div class="ryvr-workflow-controls">
+                                <button type="button" class="button ryvr-zoom-in">+</button>
+                                <button type="button" class="button ryvr-zoom-out">-</button>
+                                <button type="button" class="button ryvr-zoom-fit"><?php esc_html_e('Fit', 'ryvr'); ?></button>
+                            </div>
                         </div>
-                        <div class="ryvr-workflow-controls">
-                            <button type="button" class="button ryvr-zoom-in">+</button>
-                            <button type="button" class="button ryvr-zoom-out">-</button>
-                            <button type="button" class="button ryvr-zoom-fit"><?php esc_html_e('Fit', 'ryvr'); ?></button>
+                        
+                        <div class="ryvr-workflow-canvas" id="workflow-canvas">
+                            <div class="ryvr-canvas-grid"></div>
+                            <div class="ryvr-workflow-steps" id="workflow-steps">
+                                <!-- Steps will be dynamically added here -->
+                            </div>
+                            <svg class="ryvr-connections-svg" id="connections-svg">
+                                <!-- Connection lines will be drawn here -->
+                            </svg>
                         </div>
-                    </div>
-                    
-                    <div class="ryvr-workflow-canvas" id="workflow-canvas">
-                        <div class="ryvr-canvas-grid"></div>
-                        <div class="ryvr-workflow-steps" id="workflow-steps">
-                            <!-- Steps will be dynamically added here -->
-                        </div>
-                        <svg class="ryvr-connections-svg" id="connections-svg">
-                            <!-- Connection lines will be drawn here -->
-                        </svg>
                     </div>
                 </div>
-            </div>
 
-            <!-- JSON Editor -->
-            <div id="ryvr-json-editor" class="ryvr-tab-content">
-                <div class="ryvr-code-editor-container">
-                    <h2><?php esc_html_e('Workflow Definition (JSON)', 'ryvr'); ?></h2>
-                    <p class="description"><?php esc_html_e('Define your workflow using JSON. The definition must include an id, name, and steps array.', 'ryvr'); ?></p>
-                    <textarea id="ryvr-workflow-json" class="ryvr-code-editor"><?php echo esc_textarea($workflow_data); ?></textarea>
+                <!-- JSON Editor -->
+                <div id="ryvr-json-editor" class="ryvr-tab-content">
+                    <div class="ryvr-code-editor-container">
+                        <h2><?php esc_html_e('Workflow Definition (JSON)', 'ryvr'); ?></h2>
+                        <p class="description"><?php esc_html_e('Define your workflow using JSON. The definition must include an id, name, and steps array.', 'ryvr'); ?></p>
+                        <textarea id="ryvr-workflow-json" class="ryvr-code-editor"><?php echo esc_textarea($workflow_data); ?></textarea>
+                    </div>
                 </div>
             </div>
         </div>
@@ -328,33 +330,35 @@ $connectors = $connector_manager->get_connectors();
 </div>
 
 <style>
-/* Visual Builder Styles */
-.ryvr-editor-tabs {
+/* Visual Builder Styles - Scoped to workflow editor */
+.ryvr-workflow-editor .ryvr-editor-tabs {
     display: flex;
     border-bottom: 1px solid #c3c4c7;
     margin-bottom: 20px;
 }
 
-.ryvr-tab-button {
+.ryvr-workflow-editor .ryvr-tab-button {
     background: #f1f1f1;
     border: 1px solid #c3c4c7;
     border-bottom: none;
     padding: 10px 20px;
     cursor: pointer;
     margin-right: 5px;
+    font-size: 14px;
+    text-decoration: none;
 }
 
-.ryvr-tab-button.active {
+.ryvr-workflow-editor .ryvr-tab-button.active {
     background: #fff;
     border-bottom: 1px solid #fff;
     margin-bottom: -1px;
 }
 
-.ryvr-tab-content {
+.ryvr-workflow-editor .ryvr-tab-content {
     display: none;
 }
 
-.ryvr-tab-content.active {
+.ryvr-workflow-editor .ryvr-tab-content.active {
     display: block;
 }
 
@@ -2051,29 +2055,29 @@ jQuery(document).ready(function($) {
 
 <style type="text/css">
 .ryvr-workflow-editor {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
     margin-top: 20px;
 }
 
 .ryvr-workflow-editor-header {
     display: flex;
     justify-content: flex-end;
+    margin-bottom: 20px;
 }
 
 .ryvr-workflow-editor-body {
     display: flex;
     gap: 20px;
+    flex-direction: row;
 }
 
 .ryvr-workflow-editor-main {
-    flex: 3;
+    flex: 1;
+    min-width: 0; /* Allow flex item to shrink */
 }
 
 .ryvr-workflow-editor-sidebar {
-    flex: 1;
-    min-width: 250px;
+    width: 250px;
+    flex-shrink: 0;
 }
 
 .ryvr-panel {
