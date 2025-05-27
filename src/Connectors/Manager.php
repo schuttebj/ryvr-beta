@@ -37,9 +37,34 @@ class Manager
      */
     private function init_connectors(): void
     {
-        // Built-in connectors
-        $this->register_connector(new OpenAI\OpenAIConnector());
-        $this->register_connector(new DataForSEO\DataForSEOConnector());
+        // Load built-in connectors
+        $this->load_connector('OpenAI', 'OpenAIConnector');
+        $this->load_connector('DataForSEO', 'DataForSEOConnector');
+    }
+    
+    /**
+     * Load and register a connector.
+     *
+     * @param string $directory Connector directory name.
+     * @param string $class_name Connector class name.
+     *
+     * @return void
+     *
+     * @since 1.0.0
+     */
+    private function load_connector(string $directory, string $class_name): void
+    {
+        $file_path = RYVR_PLUGIN_DIR . "src/Connectors/{$directory}/{$class_name}.php";
+        
+        if (file_exists($file_path)) {
+            require_once $file_path;
+            
+            $full_class_name = "\\Ryvr\\Connectors\\{$directory}\\{$class_name}";
+            
+            if (class_exists($full_class_name)) {
+                $this->register_connector(new $full_class_name());
+            }
+        }
     }
     
     /**

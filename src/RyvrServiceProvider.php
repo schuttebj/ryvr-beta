@@ -126,8 +126,14 @@ class RyvrServiceProvider
         $manager_file = RYVR_PLUGIN_DIR . 'src/Connectors/Manager.php';
         if (file_exists($manager_file)) {
             require_once $manager_file;
-            $manager = new Connectors\Manager();
-            $manager->register_connectors();
+            
+            try {
+                $manager = new Connectors\Manager();
+                $manager->register_connectors();
+            } catch (\Throwable $e) {
+                // Log error but don't break the plugin
+                error_log('Ryvr: Failed to initialize connectors: ' . $e->getMessage());
+            }
         }
     }
     
