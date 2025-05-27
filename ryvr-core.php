@@ -13,7 +13,7 @@
  * Description:       An automation layer for small-business marketing that connects various marketing tools and services.
  * Version:           1.0.0-alpha
  * Requires at least: 6.5
- * Requires PHP:      8.2
+ * Requires PHP:      8.0
  * Author:            Ryvr Team
  * Author URI:        https://github.com/schuttebj
  * Text Domain:       ryvr
@@ -99,7 +99,7 @@ function ryvr_init(): void {
     if (version_compare(PHP_VERSION, '8.0', '<')) {
         add_action('admin_notices', function () {
             echo '<div class="error"><p>' . 
-                 sprintf(__('Ryvr requires PHP 8.2 or higher. You are running PHP %s.', 'ryvr'), PHP_VERSION) . 
+                 sprintf(__('Ryvr requires PHP 8.0 or higher. You are running PHP %s.', 'ryvr'), PHP_VERSION) . 
                  '</p></div>';
         });
         return;
