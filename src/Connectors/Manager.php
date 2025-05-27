@@ -37,9 +37,34 @@ class Manager
      */
     private function init_connectors(): void
     {
+        // Load base connector classes first
+        $this->load_base_classes();
+        
         // Load built-in connectors
         $this->load_connector('OpenAI', 'OpenAIConnector');
         $this->load_connector('DataForSEO', 'DataForSEOConnector');
+    }
+    
+    /**
+     * Load base connector classes.
+     *
+     * @return void
+     *
+     * @since 1.0.0
+     */
+    private function load_base_classes(): void
+    {
+        // Load interface first
+        $interface_file = RYVR_PLUGIN_DIR . 'src/Connectors/RyvrConnectorInterface.php';
+        if (file_exists($interface_file)) {
+            require_once $interface_file;
+        }
+        
+        // Load abstract connector
+        $abstract_file = RYVR_PLUGIN_DIR . 'src/Connectors/AbstractConnector.php';
+        if (file_exists($abstract_file)) {
+            require_once $abstract_file;
+        }
     }
     
     /**
