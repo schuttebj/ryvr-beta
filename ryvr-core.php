@@ -186,17 +186,53 @@ function ryvr_download_dependencies(): array {
         wp_mkdir_p($vendor_dir);
     }
     
-    // Download the minimal required dependencies directly
+    // First, let's try to download a pre-packaged vendor bundle
+    // This is a more reliable approach than downloading individual packages
+    $bundle_url = 'https://raw.githubusercontent.com/schuttebj/ryvr-beta/vendor-bundle/vendor-bundle.zip';
+    $bundle_file = download_url($bundle_url);
+    
+    if (!is_wp_error($bundle_file)) {
+        // We have a bundle, extract it
+        $result = unzip_file($bundle_file, RYVR_PLUGIN_DIR);
+        unlink($bundle_file);
+        
+        if (!is_wp_error($result)) {
+            return [
+                'success' => true,
+                'message' => __('Successfully installed dependencies from the pre-packaged bundle.', 'ryvr')
+            ];
+        }
+    }
+    
+    // If we get here, the bundle approach failed, try individual packages
     $dependencies = [
-        'guzzlehttp/guzzle' => 'https://github.com/guzzle/guzzle/archive/refs/tags/7.8.1.zip',
-        'woocommerce/action-scheduler' => 'https://github.com/woocommerce/action-scheduler/archive/refs/tags/3.7.1.zip'
+        'guzzlehttp/guzzle' => [
+            'url' => 'https://github.com/guzzle/guzzle/archive/refs/tags/7.8.1.zip',
+            'dir' => 'guzzle-7.8.1',
+            'dest' => 'guzzlehttp/guzzle'
+        ],
+        'guzzlehttp/promises' => [
+            'url' => 'https://github.com/guzzle/promises/archive/refs/tags/2.0.2.zip',
+            'dir' => 'promises-2.0.2',
+            'dest' => 'guzzlehttp/promises'
+        ],
+        'guzzlehttp/psr7' => [
+            'url' => 'https://github.com/guzzle/psr7/archive/refs/tags/2.6.2.zip',
+            'dir' => 'psr7-2.6.2',
+            'dest' => 'guzzlehttp/psr7'
+        ],
+        'woocommerce/action-scheduler' => [
+            'url' => 'https://github.com/woocommerce/action-scheduler/archive/refs/tags/3.7.1.zip',
+            'dir' => 'action-scheduler-3.7.1',
+            'dest' => 'woocommerce/action-scheduler'
+        ]
     ];
     
     $installed = [];
     $failed = [];
     
-    foreach ($dependencies as $package => $url) {
-        $result = ryvr_download_package($package, $url, $vendor_dir);
+    foreach ($dependencies as $package => $info) {
+        $result = ryvr_download_package($package, $info, $vendor_dir);
         if ($result) {
             $installed[] = $package;
         } else {
@@ -224,25 +260,126 @@ function ryvr_download_dependencies(): array {
  * Download a single package
  *
  * @param string $package Package name
- * @param string $url Download URL
+ * @param array $info Package info including URL, directory name and destination
  * @param string $vendor_dir Vendor directory path
  *
  * @return bool Success status
  */
-function ryvr_download_package(string $package, string $url, string $vendor_dir): bool {
+function ryvr_download_package(string $package, array $info, string $vendor_dir): bool {
+    $url = $info['url'];
+    $source_dir = $info['dir'];
+    $dest_path = $info['dest'];
+    
+    // Create a temp directory
+    $temp_dir = wp_tempnam('ryvr-dep-');
+    unlink($temp_dir);
+    wp_mkdir_p($temp_dir);
+    
+    // Download the package
     $temp_file = download_url($url);
     
     if (is_wp_error($temp_file)) {
         return false;
     }
     
-    $package_dir = $vendor_dir . '/' . str_replace('/', '-', $package);
-    
-    // Extract the zip file
-    $result = unzip_file($temp_file, $package_dir);
+    // Extract to the temp directory
+    $result = unzip_file($temp_file, $temp_dir);
     unlink($temp_file);
     
-    return !is_wp_error($result);
+    if (is_wp_error($result)) {
+        return false;
+    }
+    
+    // Create destination directory
+    $dest_dir = $vendor_dir . '/' . $dest_path;
+    wp_mkdir_p(dirname($dest_dir));
+    
+    // Check if GitHub archive exists
+    $github_dir = $temp_dir . '/' . $source_dir;
+    
+    if (file_exists($github_dir) && is_dir($github_dir)) {
+        // Move from the temp location to the vendor directory
+        // First remove existing directory if it exists
+        if (file_exists($dest_dir)) {
+            ryvr_recursive_rmdir($dest_dir);
+        }
+        
+        // Now copy the files
+        ryvr_recursive_copy($github_dir, $dest_dir);
+        
+        // Clean up
+        ryvr_recursive_rmdir($temp_dir);
+        
+        return true;
+    }
+    
+    // If we get here, something went wrong
+    ryvr_recursive_rmdir($temp_dir);
+    return false;
+}
+
+/**
+ * Recursively delete a directory
+ *
+ * @param string $dir Directory path
+ * 
+ * @return bool Success status
+ */
+function ryvr_recursive_rmdir(string $dir): bool {
+    if (!file_exists($dir)) {
+        return true;
+    }
+    
+    if (!is_dir($dir)) {
+        return unlink($dir);
+    }
+    
+    foreach (scandir($dir) as $item) {
+        if ($item == '.' || $item == '..') {
+            continue;
+        }
+        
+        $path = $dir . '/' . $item;
+        
+        if (is_dir($path)) {
+            ryvr_recursive_rmdir($path);
+        } else {
+            unlink($path);
+        }
+    }
+    
+    return rmdir($dir);
+}
+
+/**
+ * Recursively copy a directory
+ *
+ * @param string $src Source directory
+ * @param string $dst Destination directory
+ * 
+ * @return bool Success status
+ */
+function ryvr_recursive_copy(string $src, string $dst): bool {
+    $dir = opendir($src);
+    wp_mkdir_p($dst);
+    
+    while (($file = readdir($dir)) !== false) {
+        if ($file == '.' || $file == '..') {
+            continue;
+        }
+        
+        $src_path = $src . '/' . $file;
+        $dst_path = $dst . '/' . $file;
+        
+        if (is_dir($src_path)) {
+            ryvr_recursive_copy($src_path, $dst_path);
+        } else {
+            copy($src_path, $dst_path);
+        }
+    }
+    
+    closedir($dir);
+    return true;
 }
 
 /**
@@ -258,22 +395,54 @@ function ryvr_create_simple_autoloader(string $vendor_dir): void {
 spl_autoload_register(function ($class) {
     $vendor_dir = __DIR__;
     
-    // Handle Guzzle classes
-    if (strpos($class, "GuzzleHttp\\\\") === 0) {
-        $file = $vendor_dir . "/guzzlehttp-guzzle/src/" . str_replace("\\\\", "/", substr($class, 11)) . ".php";
-        if (file_exists($file)) {
-            require_once $file;
+    // Namespaces to handle
+    $namespaces = [
+        "GuzzleHttp\\\\" => "guzzlehttp/guzzle/src/",
+        "GuzzleHttp\\\\Promise\\\\" => "guzzlehttp/promises/src/",
+        "GuzzleHttp\\\\Psr7\\\\" => "guzzlehttp/psr7/src/"
+    ];
+    
+    foreach ($namespaces as $namespace => $dir) {
+        if (strpos($class, $namespace) === 0) {
+            $relative_class = substr($class, strlen($namespace));
+            $file = $vendor_dir . "/" . $dir . str_replace("\\\\", "/", $relative_class) . ".php";
+            
+            if (file_exists($file)) {
+                require_once $file;
+                return;
+            }
         }
     }
     
-    // Handle Action Scheduler classes
+    // Handle Action Scheduler classes - different structure
     if (strpos($class, "Action_Scheduler") === 0) {
-        $file = $vendor_dir . "/woocommerce-action-scheduler/classes/" . str_replace("_", "-", strtolower($class)) . ".php";
+        $file = $vendor_dir . "/woocommerce/action-scheduler/classes/" . str_replace("_", "-", strtolower($class)) . ".php";
         if (file_exists($file)) {
             require_once $file;
+            return;
         }
     }
 });
+
+// Load Guzzle function files that aren\'t handled by the autoloader
+$guzzle_functions = [
+    "/guzzlehttp/guzzle/src/functions_include.php",
+    "/guzzlehttp/promises/src/functions_include.php",
+    "/guzzlehttp/psr7/src/functions_include.php"
+];
+
+foreach ($guzzle_functions as $file) {
+    $path = __DIR__ . $file;
+    if (file_exists($path)) {
+        require_once $path;
+    }
+}
+
+// Bootstrap Action Scheduler if it exists
+$action_scheduler_file = __DIR__ . "/woocommerce/action-scheduler/action-scheduler.php";
+if (file_exists($action_scheduler_file)) {
+    require_once $action_scheduler_file;
+}
 ';
     
     file_put_contents($vendor_dir . '/autoload.php', $autoload_content);
