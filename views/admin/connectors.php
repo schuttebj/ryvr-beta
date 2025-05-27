@@ -193,6 +193,9 @@ jQuery(document).ready(function($) {
                         
                         if (field.type === 'password') {
                             formHtml += '<input type="password" id="ryvr-auth-' + key + '" name="' + key + '" class="regular-text" placeholder="' + (field.placeholder || '') + '" ' + (field.required ? 'required' : '') + '>';
+                        } else if (field.type === 'checkbox') {
+                            var checked = credentials[key] ? 'checked' : '';
+                            formHtml += '<input type="checkbox" id="ryvr-auth-' + key + '" name="' + key + '" value="1" ' + checked + ' ' + (field.required ? 'required' : '') + '>';
                         } else {
                             formHtml += '<input type="text" id="ryvr-auth-' + key + '" name="' + key + '" class="regular-text" value="' + (credentials[key] || '') + '" placeholder="' + (field.placeholder || '') + '" ' + (field.required ? 'required' : '') + '>';
                         }
@@ -223,8 +226,11 @@ jQuery(document).ready(function($) {
         // Collect form values
         $('#ryvr-auth-form input').each(function() {
             var name = $(this).attr('name');
-            var value = $(this).val();
-            credentials[name] = value;
+            if ($(this).attr('type') === 'checkbox') {
+                credentials[name] = $(this).is(':checked');
+            } else {
+                credentials[name] = $(this).val();
+            }
         });
         
         $('.ryvr-loading').show();
@@ -261,8 +267,11 @@ jQuery(document).ready(function($) {
         // Collect form values
         $('#ryvr-auth-form input').each(function() {
             var name = $(this).attr('name');
-            var value = $(this).val();
-            credentials[name] = value;
+            if ($(this).attr('type') === 'checkbox') {
+                credentials[name] = $(this).is(':checked');
+            } else {
+                credentials[name] = $(this).val();
+            }
         });
         
         $('.ryvr-loading').show();

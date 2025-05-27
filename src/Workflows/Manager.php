@@ -283,29 +283,40 @@ class Manager
      */
     public function ajax_save_workflow()
     {
+        // Enable error logging for debugging
+        error_log('Ryvr: Workflow save request received');
+        
         // Check nonce
         if (!wp_verify_nonce($_POST['nonce'] ?? '', 'ryvr_workflow_save')) {
+            error_log('Ryvr: Invalid nonce for workflow save');
             wp_send_json_error(['message' => __('Invalid nonce', 'ryvr')]);
         }
         
         // Check permissions
         if (!current_user_can('manage_options')) {
+            error_log('Ryvr: User lacks permissions for workflow save');
             wp_send_json_error(['message' => __('You do not have permission to do this', 'ryvr')]);
         }
         
         // Get workflow definition
-        $definition = json_decode(stripslashes($_POST['definition'] ?? ''), true);
+        $definition_raw = stripslashes($_POST['definition'] ?? '');
+        error_log('Ryvr: Raw definition: ' . substr($definition_raw, 0, 200) . '...');
+        
+        $definition = json_decode($definition_raw, true);
         
         if (!$definition) {
-            wp_send_json_error(['message' => __('Invalid workflow definition', 'ryvr')]);
+            error_log('Ryvr: Failed to decode JSON: ' . json_last_error_msg());
+            wp_send_json_error(['message' => __('Invalid workflow definition: ', 'ryvr') . json_last_error_msg()]);
         }
         
         try {
             // Create and validate the workflow
             $workflow = $this->create_workflow($definition);
+            error_log('Ryvr: Workflow created successfully: ' . $workflow->get_id());
             
             // Save the workflow
             $result = $this->save_workflow($workflow);
+            error_log('Ryvr: Workflow save result: ' . ($result ? 'success' : 'failed'));
             
             if ($result) {
                 wp_send_json_success([
@@ -313,9 +324,12 @@ class Manager
                     'id' => $workflow->get_id(),
                 ]);
             } else {
+                global $wpdb;
+                error_log('Ryvr: Database error: ' . $wpdb->last_error);
                 wp_send_json_error(['message' => __('Failed to save workflow', 'ryvr')]);
             }
         } catch (\Exception $e) {
+            error_log('Ryvr: Exception during workflow save: ' . $e->getMessage());
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }

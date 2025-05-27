@@ -658,6 +658,16 @@ $connectors = $connector_manager->get_connectors();
     opacity: 0.8;
     z-index: 1000;
     cursor: grabbing !important;
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+}
+
+.dragging-step {
+    cursor: grabbing !important;
+}
+
+.dragging-step * {
+    cursor: grabbing !important;
 }
 
 .connecting-mode .ryvr-workflow-step {
@@ -802,9 +812,20 @@ jQuery(document).ready(function($) {
         e.preventDefault();
         
         var data = JSON.parse(e.originalEvent.dataTransfer.getData('text/plain'));
-        var rect = this.getBoundingClientRect();
-        var x = e.clientX - rect.left + this.scrollLeft;
-        var y = e.clientY - rect.top + this.scrollTop;
+        var canvas = $(this);
+        var canvasOffset = canvas.offset();
+        
+        // Calculate position relative to the canvas, accounting for scroll
+        var x = e.clientX - canvasOffset.left + canvas.scrollLeft() - 75; // Center the step (150px width / 2)
+        var y = e.clientY - canvasOffset.top + canvas.scrollTop() - 40;   // Center the step (80px height / 2)
+        
+        // Snap to grid (optional - makes positioning more predictable)
+        x = Math.round(x / 20) * 20;
+        y = Math.round(y / 20) * 20;
+        
+        // Ensure minimum bounds
+        x = Math.max(20, x);
+        y = Math.max(20, y);
         
         createStep(data.type, x, y, data.connectorId);
     });
@@ -917,34 +938,44 @@ jQuery(document).ready(function($) {
         }
     });
 
-    // Step movement
+    // Step movement with grid-based positioning
     var draggedStep = null;
     var dragOffset = { x: 0, y: 0 };
+    var isDraggingStep = false;
 
     $(document).on('mousedown', '.ryvr-workflow-step', function(e) {
-        if ($(e.target).closest('.ryvr-step-action').length > 0) {
-            return; // Don't drag when clicking action buttons
+        if ($(e.target).closest('.ryvr-step-action, .ryvr-step-connector').length > 0) {
+            return; // Don't drag when clicking action buttons or connectors
         }
         
         draggedStep = $(this);
+        isDraggingStep = true;
+        
         var stepPos = draggedStep.position();
         dragOffset.x = e.clientX - stepPos.left;
         dragOffset.y = e.clientY - stepPos.top;
         
         draggedStep.addClass('dragging');
+        $('body').addClass('dragging-step');
         e.preventDefault();
     });
 
     $(document).on('mousemove', function(e) {
-        if (draggedStep) {
+        if (draggedStep && isDraggingStep) {
             var canvas = $('#workflow-canvas');
             var canvasOffset = canvas.offset();
+            
+            // Calculate new position
             var x = e.clientX - canvasOffset.left - dragOffset.x + canvas.scrollLeft();
             var y = e.clientY - canvasOffset.top - dragOffset.y + canvas.scrollTop();
             
-            // Constrain to canvas bounds
-            x = Math.max(0, Math.min(x, 2000 - draggedStep.width()));
-            y = Math.max(0, Math.min(y, 1000 - draggedStep.height()));
+            // Snap to grid for better alignment
+            x = Math.round(x / 20) * 20;
+            y = Math.round(y / 20) * 20;
+            
+            // Constrain to canvas bounds with padding
+            x = Math.max(20, Math.min(x, 1800));
+            y = Math.max(20, Math.min(y, 800));
             
             draggedStep.css({
                 left: x + 'px',
@@ -965,9 +996,11 @@ jQuery(document).ready(function($) {
     });
 
     $(document).on('mouseup', function(e) {
-        if (draggedStep) {
+        if (draggedStep && isDraggingStep) {
             draggedStep.removeClass('dragging');
+            $('body').removeClass('dragging-step');
             draggedStep = null;
+            isDraggingStep = false;
         }
     });
 
@@ -1895,7 +1928,7 @@ jQuery(document).ready(function($) {
         
         // Make AJAX request
         $.ajax({
-            url: ajaxurl, // WordPress global
+            url: '<?php echo admin_url("admin-ajax.php"); ?>',
             type: 'POST',
             data: {
                 action: 'ryvr_workflow_save',
