@@ -23,6 +23,27 @@ class RyvrServiceProvider
         // Load text domain
         add_action('init', [$this, 'load_text_domain']);
         
+        // Initialize components after 'init' action to avoid early loading issues
+        add_action('init', [$this, 'init_components'], 10);
+        
+        // Register assets
+        add_action('admin_enqueue_scripts', [$this, 'register_assets']);
+        
+        // Initialize Action Scheduler if available
+        if (class_exists('ActionScheduler')) {
+            $this->init_scheduler();
+        }
+    }
+    
+    /**
+     * Initialize plugin components.
+     *
+     * @return void
+     *
+     * @since 1.0.0
+     */
+    public function init_components(): void
+    {
         // Initialize admin components
         $this->init_admin();
         
@@ -34,14 +55,6 @@ class RyvrServiceProvider
         
         // Initialize workflow engine
         $this->init_engine();
-        
-        // Register assets
-        add_action('admin_enqueue_scripts', [$this, 'register_assets']);
-        
-        // Initialize Action Scheduler if available
-        if (class_exists('ActionScheduler')) {
-            $this->init_scheduler();
-        }
     }
     
     /**
@@ -66,14 +79,20 @@ class RyvrServiceProvider
     private function init_admin(): void
     {
         // Load admin menu
-        require_once RYVR_PLUGIN_DIR . 'src/Admin/Menu.php';
-        $menu = new Admin\Menu();
-        $menu->register();
+        $menu_file = RYVR_PLUGIN_DIR . 'src/Admin/Menu.php';
+        if (file_exists($menu_file)) {
+            require_once $menu_file;
+            $menu = new Admin\Menu();
+            $menu->register();
+        }
         
         // Load settings
-        require_once RYVR_PLUGIN_DIR . 'src/Admin/Settings.php';
-        $settings = new Admin\Settings();
-        $settings->register();
+        $settings_file = RYVR_PLUGIN_DIR . 'src/Admin/Settings.php';
+        if (file_exists($settings_file)) {
+            require_once $settings_file;
+            $settings = new Admin\Settings();
+            $settings->register();
+        }
     }
     
     /**
@@ -86,9 +105,12 @@ class RyvrServiceProvider
     private function init_api(): void
     {
         // Register API endpoints
-        require_once RYVR_PLUGIN_DIR . 'src/API/Endpoints.php';
-        $endpoints = new API\Endpoints();
-        $endpoints->register();
+        $endpoints_file = RYVR_PLUGIN_DIR . 'src/API/Endpoints.php';
+        if (file_exists($endpoints_file)) {
+            require_once $endpoints_file;
+            $endpoints = new API\Endpoints();
+            $endpoints->register();
+        }
     }
     
     /**
@@ -101,9 +123,12 @@ class RyvrServiceProvider
     private function init_connectors(): void
     {
         // Register connector manager
-        require_once RYVR_PLUGIN_DIR . 'src/Connectors/Manager.php';
-        $manager = new Connectors\Manager();
-        $manager->register_connectors();
+        $manager_file = RYVR_PLUGIN_DIR . 'src/Connectors/Manager.php';
+        if (file_exists($manager_file)) {
+            require_once $manager_file;
+            $manager = new Connectors\Manager();
+            $manager->register_connectors();
+        }
     }
     
     /**
@@ -116,16 +141,22 @@ class RyvrServiceProvider
     private function init_engine(): void
     {
         // Load workflow manager
-        require_once RYVR_PLUGIN_DIR . 'src/Workflows/Manager.php';
-        $workflow_manager = new Workflows\Manager();
-        $workflow_manager->register_workflows();
+        $workflow_manager_file = RYVR_PLUGIN_DIR . 'src/Workflows/Manager.php';
+        if (file_exists($workflow_manager_file)) {
+            require_once $workflow_manager_file;
+            $workflow_manager = new Workflows\Manager();
+            $workflow_manager->register_workflows();
+        }
         
         // Load workflow engine
-        require_once RYVR_PLUGIN_DIR . 'src/Engine/Runner.php';
-        $runner = new Engine\Runner();
-        
-        // Register hooks for cron triggers
-        add_action('ryvr_run_workflow', [$runner, 'run'], 10, 2);
+        $runner_file = RYVR_PLUGIN_DIR . 'src/Engine/Runner.php';
+        if (file_exists($runner_file)) {
+            require_once $runner_file;
+            $runner = new Engine\Runner();
+            
+            // Register hooks for cron triggers
+            add_action('ryvr_run_workflow', [$runner, 'run'], 10, 2);
+        }
     }
     
     /**
@@ -183,39 +214,51 @@ class RyvrServiceProvider
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('ryvr-admin-nonce'),
             'pluginUrl' => RYVR_PLUGIN_URL,
-            'i18n' => [
-                'errorLoadingConnector' => __('Error loading connector data.', 'ryvr'),
-                'errorSavingCredentials' => __('Error saving credentials.', 'ryvr'),
-                'errorDeletingCredentials' => __('Error deleting credentials.', 'ryvr'),
-                'errorTestingConnection' => __('Error testing connection.', 'ryvr'),
-                'configuration' => __('Configuration', 'ryvr'),
-                'noActionsFound' => __('No actions found for this connector.', 'ryvr'),
-                'errorLoadingActions' => __('Error loading actions.', 'ryvr'),
-                'invalidJson' => __('Invalid JSON. Please check your syntax.', 'ryvr'),
-                'workflowSaved' => __('Workflow saved successfully.', 'ryvr'),
-                'errorSavingWorkflow' => __('Error saving workflow.', 'ryvr'),
-                'confirmDeleteWorkflow' => __('Are you sure you want to delete this workflow? This action cannot be undone.', 'ryvr'),
-                'errorDeletingWorkflow' => __('Error deleting workflow.', 'ryvr'),
-                'errorRunningWorkflow' => __('Error running workflow.', 'ryvr'),
-                'invalidWorkflowJson' => __('Invalid workflow JSON. Please check your syntax.', 'ryvr'),
-                'workflowValid' => __('Workflow is valid!', 'ryvr'),
-                'validationErrors' => __('Workflow validation failed with the following errors:', 'ryvr'),
-                'missingWorkflowId' => __('Workflow ID is required.', 'ryvr'),
-                'missingWorkflowName' => __('Workflow name is required.', 'ryvr'),
-                'missingWorkflowSteps' => __('Workflow must have at least one step.', 'ryvr'),
-                'missingStepId' => __('Step %d must have an ID.', 'ryvr'),
-                'missingStepType' => __('Step %d must have a type.', 'ryvr'),
-                'missingStepConnector' => __('Step %d must specify a connector.', 'ryvr'),
-                'missingStepAction' => __('Step %d must specify an action.', 'ryvr'),
-                'missingStepCondition' => __('Step %d must have a condition.', 'ryvr'),
-                'missingStepTemplate' => __('Step %d must have a template.', 'ryvr'),
-                'actions' => __('Actions', 'ryvr'),
-                'parameters' => __('Parameters', 'ryvr'),
-                'name' => __('Name', 'ryvr'),
-                'type' => __('Type', 'ryvr'),
-                'description' => __('Description', 'ryvr'),
-                'insertIntoWorkflow' => __('Insert into Workflow', 'ryvr'),
-            ],
+            'i18n' => $this->get_i18n_strings(),
         ]);
+    }
+    
+    /**
+     * Get internationalization strings for JavaScript.
+     *
+     * @return array
+     *
+     * @since 1.0.0
+     */
+    private function get_i18n_strings(): array
+    {
+        return [
+            'errorLoadingConnector' => __('Error loading connector data.', 'ryvr'),
+            'errorSavingCredentials' => __('Error saving credentials.', 'ryvr'),
+            'errorDeletingCredentials' => __('Error deleting credentials.', 'ryvr'),
+            'errorTestingConnection' => __('Error testing connection.', 'ryvr'),
+            'configuration' => __('Configuration', 'ryvr'),
+            'noActionsFound' => __('No actions found for this connector.', 'ryvr'),
+            'errorLoadingActions' => __('Error loading actions.', 'ryvr'),
+            'invalidJson' => __('Invalid JSON. Please check your syntax.', 'ryvr'),
+            'workflowSaved' => __('Workflow saved successfully.', 'ryvr'),
+            'errorSavingWorkflow' => __('Error saving workflow.', 'ryvr'),
+            'confirmDeleteWorkflow' => __('Are you sure you want to delete this workflow? This action cannot be undone.', 'ryvr'),
+            'errorDeletingWorkflow' => __('Error deleting workflow.', 'ryvr'),
+            'errorRunningWorkflow' => __('Error running workflow.', 'ryvr'),
+            'invalidWorkflowJson' => __('Invalid workflow JSON. Please check your syntax.', 'ryvr'),
+            'workflowValid' => __('Workflow is valid!', 'ryvr'),
+            'validationErrors' => __('Workflow validation failed with the following errors:', 'ryvr'),
+            'missingWorkflowId' => __('Workflow ID is required.', 'ryvr'),
+            'missingWorkflowName' => __('Workflow name is required.', 'ryvr'),
+            'missingWorkflowSteps' => __('Workflow must have at least one step.', 'ryvr'),
+            'missingStepId' => __('Step %d must have an ID.', 'ryvr'),
+            'missingStepType' => __('Step %d must have a type.', 'ryvr'),
+            'missingStepConnector' => __('Step %d must specify a connector.', 'ryvr'),
+            'missingStepAction' => __('Step %d must specify an action.', 'ryvr'),
+            'missingStepCondition' => __('Step %d must have a condition.', 'ryvr'),
+            'missingStepTemplate' => __('Step %d must have a template.', 'ryvr'),
+            'actions' => __('Actions', 'ryvr'),
+            'parameters' => __('Parameters', 'ryvr'),
+            'name' => __('Name', 'ryvr'),
+            'type' => __('Type', 'ryvr'),
+            'description' => __('Description', 'ryvr'),
+            'insertIntoWorkflow' => __('Insert into Workflow', 'ryvr'),
+        ];
     }
 } 
