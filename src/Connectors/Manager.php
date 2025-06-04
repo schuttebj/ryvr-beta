@@ -195,12 +195,27 @@ class Manager
             wp_send_json_error(['message' => __('Invalid request parameters.', 'ryvr')]);
         }
         
-        // Handle [USE_SAVED] markers by loading saved credentials
+        // Handle [USE_SAVED] markers by replacing with actual saved credentials
         $has_saved_markers = false;
         foreach ($credentials as $key => $value) {
             if ($value === '[USE_SAVED]') {
                 $has_saved_markers = true;
                 break;
+            }
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('');
+            error_log('=== Manager Credential Processing Debug ===');
+            error_log('Ryvr: Processing credentials for connector: ' . $connector_id);
+            error_log('Ryvr: Has [USE_SAVED] markers: ' . ($has_saved_markers ? 'YES' : 'NO'));
+            error_log('Ryvr: Input credentials keys: ' . print_r(array_keys($credentials), true));
+            foreach ($credentials as $key => $value) {
+                if (strpos($key, 'password') !== false) {
+                    error_log('Ryvr: Input credential[' . $key . '] = ' . ($value === '[USE_SAVED]' ? '[USE_SAVED]' : '[' . strlen($value) . ' chars]'));
+                } else {
+                    error_log('Ryvr: Input credential[' . $key . '] = ' . $value);
+                }
             }
         }
         
@@ -214,21 +229,61 @@ class Manager
                 $user_id
             ));
             
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Database query result: ' . ($result ? 'FOUND' : 'NOT FOUND'));
+                if ($result) {
+                    error_log('Ryvr: Raw saved data length: ' . strlen($result));
+                }
+            }
+            
             if ($result) {
                 $saved_encrypted = json_decode($result, true);
                 if (is_array($saved_encrypted)) {
                     require_once RYVR_PLUGIN_DIR . 'src/Security/Encryption.php';
+                    
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Ryvr: Saved encrypted keys: ' . print_r(array_keys($saved_encrypted), true));
+                    }
                     
                     foreach ($credentials as $key => $value) {
                         if ($value === '[USE_SAVED]' && isset($saved_encrypted[$key])) {
                             $decrypted = \Ryvr\Security\Encryption::decrypt($saved_encrypted[$key]);
                             if ($decrypted !== false) {
                                 $credentials[$key] = $decrypted;
+                                if (defined('WP_DEBUG') && WP_DEBUG) {
+                                    if (strpos($key, 'password') !== false) {
+                                        error_log('Ryvr: Replaced [USE_SAVED] for ' . $key . ' with [' . strlen($decrypted) . ' chars]');
+                                    } else {
+                                        error_log('Ryvr: Replaced [USE_SAVED] for ' . $key . ' with: ' . $decrypted);
+                                    }
+                                }
+                            } else {
+                                if (defined('WP_DEBUG') && WP_DEBUG) {
+                                    error_log('Ryvr: Failed to decrypt saved value for: ' . $key);
+                                }
                             }
                         }
                     }
+                } else {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Ryvr: Failed to decode saved credentials JSON');
+                    }
                 }
             }
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('');
+            error_log('--- Final Credentials for Validation ---');
+            foreach ($credentials as $key => $value) {
+                if (strpos($key, 'password') !== false) {
+                    error_log('Ryvr: Final credential[' . $key . '] = [' . strlen($value) . ' chars] ' . (empty($value) ? 'EMPTY' : 'NOT EMPTY'));
+                } else {
+                    error_log('Ryvr: Final credential[' . $key . '] = ' . $value);
+                }
+            }
+            error_log('=== End Manager Credential Processing Debug ===');
+            error_log('');
         }
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -294,6 +349,21 @@ class Manager
             wp_send_json_error(['message' => __('Invalid request parameters.', 'ryvr')]);
         }
         
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('');
+            error_log('=== Manager Credential Saving Debug ===');
+            error_log('Ryvr: Saving credentials for connector: ' . $connector_id);
+            error_log('Ryvr: User ID: ' . $user_id);
+            error_log('Ryvr: Input credentials keys: ' . print_r(array_keys($credentials), true));
+            foreach ($credentials as $key => $value) {
+                if (strpos($key, 'password') !== false) {
+                    error_log('Ryvr: Input credential[' . $key . '] = ' . ($value === '[KEEP_EXISTING]' ? '[KEEP_EXISTING]' : '[' . strlen($value) . ' chars]'));
+                } else {
+                    error_log('Ryvr: Input credential[' . $key . '] = ' . $value);
+                }
+            }
+        }
+        
         global $wpdb;
         $table_name = $wpdb->prefix . 'ryvr_api_keys';
         
@@ -303,6 +373,10 @@ class Manager
             $connector_id,
             $user_id
         ));
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: Existing credentials ID: ' . ($existing ? $existing : 'NONE'));
+        }
         
         // Encrypt sensitive data
         require_once RYVR_PLUGIN_DIR . 'src/Security/Encryption.php';
@@ -316,6 +390,10 @@ class Manager
                 $existing
             ));
             
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Found existing credentials data: ' . ($existing_result ? 'YES' : 'NO'));
+            }
+            
             if ($existing_result) {
                 $existing_encrypted = json_decode($existing_result, true);
                 if (is_array($existing_encrypted)) {
@@ -324,6 +402,13 @@ class Manager
                             $decrypted = \Ryvr\Security\Encryption::decrypt($value);
                             if ($decrypted !== false) {
                                 $existing_credentials[$key] = $decrypted;
+                                if (defined('WP_DEBUG') && WP_DEBUG) {
+                                    if (strpos($key, 'password') !== false) {
+                                        error_log('Ryvr: Loaded existing credential[' . $key . '] = [' . strlen($decrypted) . ' chars]');
+                                    } else {
+                                        error_log('Ryvr: Loaded existing credential[' . $key . '] = ' . $decrypted);
+                                    }
+                                }
                             }
                         }
                     }
@@ -335,10 +420,27 @@ class Manager
             if ($value === '[KEEP_EXISTING]' && isset($existing_credentials[$key])) {
                 // Use existing value for this field
                 $encrypted_data[$key] = \Ryvr\Security\Encryption::encrypt($existing_credentials[$key]);
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    if (strpos($key, 'password') !== false) {
+                        error_log('Ryvr: Keeping existing value for ' . $key . ' [' . strlen($existing_credentials[$key]) . ' chars]');
+                    } else {
+                        error_log('Ryvr: Keeping existing value for ' . $key . ' = ' . $existing_credentials[$key]);
+                    }
+                }
             } elseif (is_string($value) && $value !== '[KEEP_EXISTING]') {
                 $encrypted_data[$key] = \Ryvr\Security\Encryption::encrypt($value);
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    if (strpos($key, 'password') !== false) {
+                        error_log('Ryvr: Encrypting new value for ' . $key . ' [' . strlen($value) . ' chars]');
+                    } else {
+                        error_log('Ryvr: Encrypting new value for ' . $key . ' = ' . $value);
+                    }
+                }
             } else {
                 $encrypted_data[$key] = $value;
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Ryvr: Storing raw value for ' . $key . ' = ' . $value);
+                }
             }
         }
         
@@ -349,6 +451,13 @@ class Manager
             'is_shared' => false,
         ];
         
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('');
+            error_log('--- Database Save Operation ---');
+            error_log('Ryvr: Data to save: connector_slug=' . $connector_id . ', user_id=' . $user_id . ', is_shared=false');
+            error_log('Ryvr: Encrypted data keys: ' . print_r(array_keys($encrypted_data), true));
+        }
+        
         if ($existing) {
             // Update existing
             $result = $wpdb->update(
@@ -358,9 +467,30 @@ class Manager
                     'id' => $existing,
                 ]
             );
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Update operation result: ' . ($result !== false ? 'SUCCESS' : 'FAILED'));
+                if ($result === false) {
+                    error_log('Ryvr: Database error: ' . $wpdb->last_error);
+                }
+            }
         } else {
             // Insert new
             $result = $wpdb->insert($table_name, $data);
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Insert operation result: ' . ($result !== false ? 'SUCCESS' : 'FAILED'));
+                if ($result !== false) {
+                    error_log('Ryvr: New record ID: ' . $wpdb->insert_id);
+                } else {
+                    error_log('Ryvr: Database error: ' . $wpdb->last_error);
+                }
+            }
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('=== End Manager Credential Saving Debug ===');
+            error_log('');
         }
         
         if ($result !== false) {
