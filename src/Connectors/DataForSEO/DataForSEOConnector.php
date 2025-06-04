@@ -66,6 +66,22 @@ class DataForSEOConnector extends AbstractConnector
     }
     
     /**
+     * Get connector metadata for the UI.
+     *
+     * @return array
+     */
+    public function get_metadata(): array
+    {
+        return [
+            'id' => $this->get_id(),
+            'name' => $this->get_name(),
+            'description' => $this->get_description(),
+            'category' => 'seo',
+            'brand_color' => '#1e40af'
+        ];
+    }
+    
+    /**
      * Get the authentication fields required by this connector.
      *
      * @return array List of authentication field definitions.

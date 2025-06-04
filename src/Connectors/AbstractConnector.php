@@ -5,6 +5,11 @@ namespace Ryvr\Connectors;
 
 use Ryvr\Admin\Settings;
 use Ryvr\Security\Encryption;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\HttpFactory;
 
 /**
  * Abstract base class for Ryvr connectors.
@@ -13,6 +18,67 @@ use Ryvr\Security\Encryption;
  */
 abstract class AbstractConnector implements RyvrConnectorInterface
 {
+    /**
+     * HTTP client for making requests.
+     *
+     * @var ClientInterface
+     */
+    protected $httpClient;
+    
+    /**
+     * Request factory for creating PSR-7 requests.
+     *
+     * @var RequestFactoryInterface
+     */
+    protected $requestFactory;
+    
+    /**
+     * Stream factory for creating PSR-7 streams.
+     *
+     * @var StreamFactoryInterface
+     */
+    protected $streamFactory;
+    
+    /**
+     * Authentication credentials.
+     *
+     * @var array
+     */
+    protected $auth = [];
+    
+    /**
+     * Initialize the connector with authentication.
+     *
+     * @param array $auth Authentication credentials.
+     * @return void
+     */
+    protected function init(array $auth): void
+    {
+        $this->auth = $auth;
+        
+        // Initialize HTTP client and factories
+        $this->httpClient = new Client();
+        $httpFactory = new HttpFactory();
+        $this->requestFactory = $httpFactory;
+        $this->streamFactory = $httpFactory;
+    }
+    
+    /**
+     * Get connector metadata for the UI.
+     *
+     * @return array
+     */
+    public function get_metadata(): array
+    {
+        return [
+            'id' => $this->get_id(),
+            'name' => $this->get_name(),
+            'description' => $this->get_description(),
+            'category' => 'general',
+            'brand_color' => '#666666'
+        ];
+    }
+    
     /**
      * Get the connector icon URL.
      *

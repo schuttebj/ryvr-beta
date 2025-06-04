@@ -49,23 +49,139 @@ class Runner
      */
     public function run(string $workflow_id, array $input = []): array
     {
-        // Log workflow execution start
-        $this->log_execution_start($workflow_id, $input);
-        
         try {
-            // Execute the workflow
-            $result = $this->workflow_manager->execute_workflow($workflow_id, $input);
+            // Load workflow from database
+            global $wpdb;
             
-            // Log workflow execution success
-            $this->log_execution_success($workflow_id, $result);
+            $workflow = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}ryvr_workflows WHERE id = %s",
+                    $workflow_id
+                )
+            );
             
-            return $result;
+            if (!$workflow) {
+                throw new \Exception("Workflow not found: {$workflow_id}");
+            }
+            
+            // Parse workflow definition
+            $definition = json_decode($workflow->definition, true);
+            if (!$definition) {
+                throw new \Exception("Invalid workflow definition");
+            }
+            
+            // Execute workflow nodes
+            return $this->execute_workflow_nodes($definition, $input);
+            
         } catch (\Exception $e) {
-            // Log workflow execution failure
-            $this->log_execution_failure($workflow_id, $e);
-            
-            throw $e;
+            error_log('Ryvr: Workflow execution failed: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
         }
+    }
+    
+    /**
+     * Execute workflow nodes.
+     *
+     * @param array $definition
+     * @param array $input
+     * @return array
+     */
+    private function execute_workflow_nodes(array $definition, array $input): array
+    {
+        $results = [];
+        $context = $input;
+        
+        // Process nodes from the workflow builder format
+        if (isset($definition['nodes'])) {
+            foreach ($definition['nodes'] as $node) {
+                try {
+                    $result = $this->execute_node($node, $context);
+                    $results[$node['id']] = $result;
+                    
+                    // Update context with result for next nodes
+                    $context = array_merge($context, $result);
+                    
+                } catch (\Exception $e) {
+                    error_log("Ryvr: Node execution failed for {$node['id']}: " . $e->getMessage());
+                    $results[$node['id']] = [
+                        'success' => false,
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+        }
+        
+        return [
+            'success' => true,
+            'results' => $results,
+            'context' => $context
+        ];
+    }
+    
+    /**
+     * Execute a single node.
+     *
+     * @param array $node
+     * @param array $context
+     * @return array
+     */
+    private function execute_node(array $node, array $context): array
+    {
+        $connector_id = $node['connectorId'];
+        $action_id = $node['actionId'];
+        $parameters = $node['parameters'] ?? [];
+        
+        // Get connector instance
+        $connector = $this->get_connector($connector_id);
+        if (!$connector) {
+            throw new \Exception("Connector not found: {$connector_id}");
+        }
+        
+        // Get authentication (placeholder - would need to get from settings/user)
+        $auth = $this->get_auth_for_connector($connector_id);
+        
+        // Execute action
+        return $connector->execute_action($action_id, $parameters, $auth);
+    }
+    
+    /**
+     * Get connector instance.
+     *
+     * @param string $connector_id
+     * @return mixed|null
+     */
+    private function get_connector(string $connector_id)
+    {
+        switch ($connector_id) {
+            case 'openai':
+                if (class_exists('\Ryvr\Connectors\OpenAI\OpenAIConnector')) {
+                    return new \Ryvr\Connectors\OpenAI\OpenAIConnector();
+                }
+                break;
+            case 'dataforseo':
+                if (class_exists('\Ryvr\Connectors\DataForSEO\DataForSEOConnector')) {
+                    return new \Ryvr\Connectors\DataForSEO\DataForSEOConnector();
+                }
+                break;
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get authentication for connector.
+     * TODO: Implement proper auth retrieval from settings/user
+     *
+     * @param string $connector_id
+     * @return array
+     */
+    private function get_auth_for_connector(string $connector_id): array
+    {
+        // Placeholder - would need to implement proper auth retrieval
+        return [];
     }
     
     /**
@@ -119,74 +235,15 @@ class Runner
     }
     
     /**
-     * Log workflow execution start.
+     * Continue workflow execution after async task completion.
      *
-     * @param string $workflow_id   Workflow ID.
-     * @param array  $input         Input data for the workflow.
-     *
+     * @param int $workflow_run_id
+     * @param array $task_result
      * @return void
-     *
-     * @since 1.0.0
      */
-    protected function log_execution_start(string $workflow_id, array $input): void
+    public function continue_after_async_task(int $workflow_run_id, array $task_result): void
     {
-        // Simple logging for now
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                'Ryvr: Starting workflow execution: %s with input: %s',
-                $workflow_id,
-                json_encode($input)
-            ));
-        }
-        
-        // TODO: Implement proper logging to database
-    }
-    
-    /**
-     * Log workflow execution success.
-     *
-     * @param string $workflow_id   Workflow ID.
-     * @param array  $result        Workflow execution result.
-     *
-     * @return void
-     *
-     * @since 1.0.0
-     */
-    protected function log_execution_success(string $workflow_id, array $result): void
-    {
-        // Simple logging for now
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                'Ryvr: Workflow execution completed successfully: %s with result: %s',
-                $workflow_id,
-                json_encode($result)
-            ));
-        }
-        
-        // TODO: Implement proper logging to database
-    }
-    
-    /**
-     * Log workflow execution failure.
-     *
-     * @param string     $workflow_id   Workflow ID.
-     * @param \Exception $exception     Exception that occurred.
-     *
-     * @return void
-     *
-     * @since 1.0.0
-     */
-    protected function log_execution_failure(string $workflow_id, \Exception $exception): void
-    {
-        // Simple logging for now
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                'Ryvr: Workflow execution failed: %s with error: %s',
-                $workflow_id,
-                $exception->getMessage()
-            ));
-        }
-        
-        // TODO: Implement proper logging to database
+        // TODO: Implement continuation logic for async tasks
+        error_log("Ryvr: Continuing workflow {$workflow_run_id} after async task completion");
     }
 } 

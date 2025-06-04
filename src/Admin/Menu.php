@@ -52,26 +52,6 @@ class Menu
             [$this, 'render_dashboard_page']
         );
         
-        // Workflows submenu
-        add_submenu_page(
-            'ryvr',
-            __('Workflows', 'ryvr'),
-            __('Workflows', 'ryvr'),
-            'view_ryvr_workflows',
-            'ryvr-workflows',
-            [$this, 'render_workflows_page']
-        );
-        
-        // Add New Workflow submenu
-        add_submenu_page(
-            'ryvr',
-            __('Add New Workflow', 'ryvr'),
-            __('Add New', 'ryvr'),
-            'create_ryvr_workflows',
-            'ryvr-add-workflow',
-            [$this, 'render_add_workflow_page']
-        );
-        
         // Connectors submenu
         add_submenu_page(
             'ryvr',
@@ -138,32 +118,6 @@ class Menu
     {
         // Include dashboard view
         require_once RYVR_PLUGIN_DIR . 'views/admin/dashboard.php';
-    }
-    
-    /**
-     * Render workflows page.
-     *
-     * @return void
-     *
-     * @since 1.0.0
-     */
-    public function render_workflows_page(): void
-    {
-        // Include workflows list view
-        require_once RYVR_PLUGIN_DIR . 'views/admin/workflows/list.php';
-    }
-    
-    /**
-     * Render add workflow page.
-     *
-     * @return void
-     *
-     * @since 1.0.0
-     */
-    public function render_add_workflow_page(): void
-    {
-        // Include add workflow view
-        require_once RYVR_PLUGIN_DIR . 'views/admin/workflows/add.php';
     }
     
     /**

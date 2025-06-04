@@ -130,6 +130,29 @@ class RyvrServiceProvider
      */
     private function init_connectors(): void
     {
+        // Load connector interface first
+        $interface_file = RYVR_PLUGIN_DIR . 'src/Connectors/RyvrConnectorInterface.php';
+        if (file_exists($interface_file)) {
+            require_once $interface_file;
+        }
+        
+        // Load abstract connector
+        $abstract_file = RYVR_PLUGIN_DIR . 'src/Connectors/AbstractConnector.php';
+        if (file_exists($abstract_file)) {
+            require_once $abstract_file;
+        }
+        
+        // Load individual connectors
+        $openai_file = RYVR_PLUGIN_DIR . 'src/Connectors/OpenAI/OpenAIConnector.php';
+        if (file_exists($openai_file)) {
+            require_once $openai_file;
+        }
+        
+        $dataforseo_file = RYVR_PLUGIN_DIR . 'src/Connectors/DataForSEO/DataForSEOConnector.php';
+        if (file_exists($dataforseo_file)) {
+            require_once $dataforseo_file;
+        }
+        
         // Register connector manager
         $manager_file = RYVR_PLUGIN_DIR . 'src/Connectors/Manager.php';
         if (file_exists($manager_file)) {
@@ -154,21 +177,21 @@ class RyvrServiceProvider
      */
     private function init_engine(): void
     {
-        // Load workflow manager
-        $workflow_manager_file = RYVR_PLUGIN_DIR . 'src/Workflows/Manager.php';
-        if (file_exists($workflow_manager_file)) {
-            require_once $workflow_manager_file;
-            $workflow_manager = new Workflows\Manager();
-            $workflow_manager->register_workflows();
+        // Load async task manager for DataForSEO operations
+        $async_manager_file = RYVR_PLUGIN_DIR . 'src/Engine/AsyncTaskManager.php';
+        if (file_exists($async_manager_file)) {
+            require_once $async_manager_file;
+            $async_manager = new Engine\AsyncTaskManager();
+            $async_manager->register();
         }
         
-        // Load workflow engine
+        // Load workflow runner for execution
         $runner_file = RYVR_PLUGIN_DIR . 'src/Engine/Runner.php';
         if (file_exists($runner_file)) {
             require_once $runner_file;
             $runner = new Engine\Runner();
             
-            // Register hooks for cron triggers
+            // Register hooks for workflow execution
             add_action('ryvr_run_workflow', [$runner, 'run'], 10, 2);
         }
     }
