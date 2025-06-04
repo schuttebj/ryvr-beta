@@ -92,16 +92,16 @@ class DataForSEOConnector extends AbstractConnector
     {
         return [
             'login' => [
-                'label' => __('Login', 'ryvr'),
+                'label' => __('API Login', 'ryvr'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your DataForSEO API login.', 'ryvr'),
+                'description' => __('Your DataForSEO API login (not your email). Get this from your DataForSEO dashboard under API settings.', 'ryvr'),
             ],
             'password' => [
-                'label' => __('Password', 'ryvr'),
+                'label' => __('API Password', 'ryvr'),
                 'type' => 'password',
                 'required' => true,
-                'description' => __('Your DataForSEO API password.', 'ryvr'),
+                'description' => __('Your DataForSEO API password (generated token). Get this from your DataForSEO dashboard under API settings.', 'ryvr'),
             ],
             'use_sandbox' => [
                 'label' => __('Use Sandbox', 'ryvr'),
@@ -169,7 +169,7 @@ class DataForSEOConnector extends AbstractConnector
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 try {
-                    error_log('Ryvr: DataForSEO making request to: ' . $api_url . '/user');
+                    error_log('Ryvr: DataForSEO making request to: ' . $api_url . '/appendix/user_entities');
                     error_log('Ryvr: DataForSEO login: ' . $credentials['login']);
                     error_log('Ryvr: DataForSEO password length: ' . strlen($credentials['password']));
                     error_log('Ryvr: DataForSEO use_sandbox: ' . (!empty($credentials['use_sandbox']) ? 'true' : 'false'));
@@ -179,7 +179,7 @@ class DataForSEOConnector extends AbstractConnector
             }
             
             // Use a simpler endpoint for validation - just check user info
-            $response = $client->request('GET', $api_url . '/user', [
+            $response = $client->request('GET', $api_url . '/appendix/user_entities', [
                 'auth' => [
                     $credentials['login'],
                     $credentials['password'],
