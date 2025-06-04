@@ -649,7 +649,8 @@
 .ryvr-form-field input[type="password"],
 .ryvr-form-field input[type="email"],
 .ryvr-form-field textarea,
-.ryvr-form-field select {
+.ryvr-form-field select,
+.ryvr-form-field .regular-text {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid var(--ryvr-border);
@@ -658,11 +659,13 @@
     background: var(--ryvr-white);
     color: var(--ryvr-primary);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
 }
 
 .ryvr-form-field input:focus,
 .ryvr-form-field textarea:focus,
-.ryvr-form-field select:focus {
+.ryvr-form-field select:focus,
+.ryvr-form-field .regular-text:focus {
     outline: none;
     border-color: var(--ryvr-accent);
     box-shadow: 0 0 0 3px rgba(95, 94, 255, 0.1);
@@ -670,6 +673,16 @@
 
 .ryvr-form-field input[type="checkbox"] {
     margin-right: 8px;
+    width: auto;
+}
+
+.ryvr-form-field .description {
+    color: var(--ryvr-secondary);
+    font-size: 12px;
+    margin-top: 4px;
+    margin-bottom: 0;
+    line-height: 1.4;
+    font-style: italic;
 }
 
 .ryvr-form-actions {

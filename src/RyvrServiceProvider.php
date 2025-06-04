@@ -271,9 +271,12 @@ class RyvrServiceProvider
     {
         return [
             'errorLoadingConnector' => __('Error loading connector data.', 'ryvr'),
+            'errorLoadingFields' => __('Error loading authentication fields.', 'ryvr'),
             'errorSavingCredentials' => __('Error saving credentials.', 'ryvr'),
             'errorDeletingCredentials' => __('Error deleting credentials.', 'ryvr'),
             'errorTestingConnection' => __('Error testing connection.', 'ryvr'),
+            'errorTestingCredentials' => __('Error testing credentials.', 'ryvr'),
+            'confirmDeleteCredentials' => __('Are you sure you want to delete these credentials?', 'ryvr'),
             'configuration' => __('Configuration', 'ryvr'),
             'noActionsFound' => __('No actions found for this connector.', 'ryvr'),
             'errorLoadingActions' => __('Error loading actions.', 'ryvr'),

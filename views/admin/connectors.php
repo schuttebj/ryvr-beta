@@ -139,6 +139,11 @@ jQuery(document).ready(function($) {
     function openConnectorModal(connectorId) {
         currentConnector = connectorId;
         
+        // Debug logging
+        console.log('Opening connector modal for:', connectorId);
+        console.log('AJAX URL:', ryvrData.ajaxUrl);
+        console.log('Nonce:', ryvrData.nonce);
+        
         // Get connector info via AJAX
         $('.ryvr-loading').show();
         $('#ryvr-auth-fields').empty();
@@ -152,6 +157,7 @@ jQuery(document).ready(function($) {
                 nonce: ryvrData.nonce
             },
             success: function(response) {
+                console.log('Get actions response:', response);
                 $('.ryvr-loading').hide();
                 
                 if (response.success) {
@@ -162,12 +168,14 @@ jQuery(document).ready(function($) {
                     // Load auth fields via another AJAX call
                     loadAuthFields(connectorId);
                 } else {
-                    alert(response.data.message);
+                    console.error('Failed to get actions:', response);
+                    alert(response.data ? response.data.message : 'Unknown error');
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('AJAX error getting actions:', xhr, status, error);
                 $('.ryvr-loading').hide();
-                alert(ryvrData.i18n.errorLoadingConnector);
+                alert(ryvrData.i18n.errorLoadingConnector + ' (Status: ' + status + ')');
             }
         });
         
@@ -176,6 +184,7 @@ jQuery(document).ready(function($) {
     
     // Function to load auth fields
     function loadAuthFields(connectorId) {
+        console.log('Loading auth fields for:', connectorId);
         $('.ryvr-loading').show();
         
         $.ajax({
@@ -187,11 +196,15 @@ jQuery(document).ready(function($) {
                 nonce: ryvrData.nonce
             },
             success: function(response) {
+                console.log('Get auth fields response:', response);
                 $('.ryvr-loading').hide();
                 
                 if (response.success) {
                     var fields = response.data.fields;
                     var credentials = response.data.saved_credentials || {};
+                    
+                    console.log('Auth fields:', fields);
+                    console.log('Saved credentials:', credentials);
                     
                     // Build the form
                     var formHtml = '';
@@ -219,12 +232,14 @@ jQuery(document).ready(function($) {
                     
                     $('#ryvr-auth-fields').html(formHtml);
                 } else {
-                    alert(response.data.message);
+                    console.error('Failed to get auth fields:', response);
+                    alert(response.data ? response.data.message : 'Unknown error loading auth fields');
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('AJAX error getting auth fields:', xhr, status, error);
                 $('.ryvr-loading').hide();
-                alert(ryvrData.i18n.errorLoadingFields);
+                alert(ryvrData.i18n.errorLoadingFields + ' (Status: ' + status + ')');
             }
         });
     }
@@ -243,6 +258,9 @@ jQuery(document).ready(function($) {
             }
         });
         
+        console.log('Saving credentials for connector:', currentConnector);
+        console.log('Credentials to save:', credentials);
+        
         $('.ryvr-loading').show();
         
         $.ajax({
@@ -255,17 +273,20 @@ jQuery(document).ready(function($) {
                 nonce: ryvrData.nonce
             },
             success: function(response) {
+                console.log('Save auth response:', response);
                 $('.ryvr-loading').hide();
                 
                 if (response.success) {
                     alert(response.data.message);
                 } else {
-                    alert(response.data.message);
+                    console.error('Failed to save credentials:', response);
+                    alert(response.data ? response.data.message : 'Unknown error saving credentials');
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('AJAX error saving credentials:', xhr, status, error);
                 $('.ryvr-loading').hide();
-                alert(ryvrData.i18n.errorSavingCredentials);
+                alert(ryvrData.i18n.errorSavingCredentials + ' (Status: ' + status + ')');
             }
         });
     }
@@ -284,6 +305,9 @@ jQuery(document).ready(function($) {
             }
         });
         
+        console.log('Testing credentials for connector:', currentConnector);
+        console.log('Credentials to test:', credentials);
+        
         $('.ryvr-loading').show();
         
         $.ajax({
@@ -296,17 +320,20 @@ jQuery(document).ready(function($) {
                 nonce: ryvrData.nonce
             },
             success: function(response) {
+                console.log('Test auth response:', response);
                 $('.ryvr-loading').hide();
                 
                 if (response.success) {
                     alert(response.data.message);
                 } else {
-                    alert(response.data.message);
+                    console.error('Failed to validate credentials:', response);
+                    alert(response.data ? response.data.message : 'Unknown error testing credentials');
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('AJAX error testing credentials:', xhr, status, error);
                 $('.ryvr-loading').hide();
-                alert(ryvrData.i18n.errorTestingCredentials);
+                alert(ryvrData.i18n.errorTestingCredentials + ' (Status: ' + status + ')');
             }
         });
     }
