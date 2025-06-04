@@ -343,6 +343,10 @@ class WorkflowBuilder
                 nonce: '<?php echo wp_create_nonce('ryvr_workflow_builder'); ?>',
                 ajax_url: '<?php echo admin_url('admin-ajax.php'); ?>'
             };
+        } else if (!ryvrWorkflowBuilder.nonce || !ryvrWorkflowBuilder.ajax_url) {
+            console.warn('ryvrWorkflowBuilder exists but missing data, fixing...');
+            ryvrWorkflowBuilder.nonce = '<?php echo wp_create_nonce('ryvr_workflow_builder'); ?>';
+            ryvrWorkflowBuilder.ajax_url = '<?php echo admin_url('admin-ajax.php'); ?>';
         }
         
         // Try to detect if scripts are loading

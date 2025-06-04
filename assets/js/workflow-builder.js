@@ -602,8 +602,13 @@ class RyvrWorkflowBuilder {
 // Global instance and utilities
 let ryvrWorkflowBuilderInstance = null;
 
+// Preserve existing ryvrWorkflowBuilder data from WordPress localization
+const existingData = window.ryvrWorkflowBuilder || {};
+
 window.ryvrWorkflowBuilder = {
-    nonce: '', // Will be set by PHP
+    // Preserve WordPress localized data
+    nonce: existingData.nonce || '',
+    ajax_url: existingData.ajax_url || '',
     
     init(container) {
         ryvrWorkflowBuilderInstance = new RyvrWorkflowBuilder(container);
