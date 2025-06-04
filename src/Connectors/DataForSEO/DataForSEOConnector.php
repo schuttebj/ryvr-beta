@@ -900,7 +900,7 @@ class DataForSEOConnector extends AbstractConnector
     }
     
     /**
-     * Make HTTP request to DataForSEO API.
+     * Make HTTP request to DataForSEO API using Guzzle with WordPress bypass.
      *
      * @param string $method
      * @param string $endpoint
@@ -909,38 +909,167 @@ class DataForSEOConnector extends AbstractConnector
      */
     private function make_request(string $method, string $endpoint, array $data = []): array
     {
-        $url = self::API_URL . $endpoint;
+        // Get the appropriate API URL (live or sandbox)
+        $api_url = $this->getApiUrl($this->auth);
+        $url = $api_url . $endpoint;
         
-        $headers = [
-            'Authorization' => 'Basic ' . base64_encode($this->auth['login'] . ':' . $this->auth['password']),
-            'Content-Type' => 'application/json',
-            'User-Agent' => 'Ryvr/1.0'
-        ];
-
-        $request = $this->requestFactory->createRequest($method, $url);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: DataForSEO make_request - URL: ' . $url);
+            error_log('Ryvr: DataForSEO make_request - Method: ' . $method);
+            error_log('Ryvr: DataForSEO make_request - Data: ' . print_r($data, true));
+        }
         
-        foreach ($headers as $name => $value) {
-            $request = $request->withHeader($name, $value);
-        }
-
-        if (!empty($data)) {
-            $request = $request->withBody(
-                $this->streamFactory->createStream(json_encode($data))
-            );
-        }
-
         try {
-            $response = $this->httpClient->sendRequest($request);
-            $body = $response->getBody()->getContents();
+            // Create Guzzle client with WordPress bypass configuration
+            $client = $this->createBypassClient();
             
-            if ($response->getStatusCode() >= 400) {
-                throw new \Exception("DataForSEO API error: {$body}");
+            $headers = [
+                'Authorization' => 'Basic ' . base64_encode($this->auth['login'] . ':' . $this->auth['password']),
+                'Accept' => '*/*',
+                'Accept-Encoding' => 'deflate, gzip',
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+            ];
+            
+            $options = [
+                'headers' => $headers,
+                'timeout' => 30,
+                'connect_timeout' => 10,
+                'verify' => true,
+                'http_errors' => false, // Handle errors manually
+            ];
+            
+            if (!empty($data) && in_array($method, ['POST', 'PUT', 'PATCH'])) {
+                $options['headers']['Content-Type'] = 'application/json';
+                $options['body'] = json_encode($data);
             }
             
-            return json_decode($body, true) ?: [];
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: DataForSEO Guzzle headers: ' . print_r($headers, true));
+            }
+            
+            // Make the request using Guzzle
+            $response = $client->request($method, $url, $options);
+            
+            $status_code = $response->getStatusCode();
+            $body = $response->getBody()->getContents();
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: DataForSEO Guzzle response status: ' . $status_code);
+                error_log('Ryvr: DataForSEO Guzzle response body (first 500 chars): ' . substr($body, 0, 500));
+            }
+            
+            if ($status_code >= 400) {
+                throw new \Exception("DataForSEO API error (HTTP {$status_code}): {$body}");
+            }
+            
+            $decoded = json_decode($body, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception("DataForSEO API returned invalid JSON: " . json_last_error_msg());
+            }
+            
+            return $decoded ?: [];
+            
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: DataForSEO Guzzle RequestException: ' . $e->getMessage());
+            }
+            
+            // Fallback to cURL if Guzzle fails due to WordPress interference
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: DataForSEO falling back to cURL due to Guzzle failure');
+            }
+            
+            return $this->make_request_curl($method, $url, $data, $headers);
             
         } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: DataForSEO make_request exception: ' . $e->getMessage());
+            }
             throw new \Exception("DataForSEO connector error: " . $e->getMessage());
         }
+    }
+    
+    /**
+     * Create a Guzzle client configured to bypass WordPress HTTP interception.
+     *
+     * @return \GuzzleHttp\Client
+     */
+    private function createBypassClient(): \GuzzleHttp\Client
+    {
+        // Force cURL handler to bypass WordPress HTTP API
+        $handlerStack = \GuzzleHttp\HandlerStack::create();
+        
+        // Add middleware to bypass WordPress if needed
+        $handlerStack->push(\GuzzleHttp\Middleware::mapRequest(function ($request) {
+            // Force WordPress to not intercept this request by setting custom header
+            return $request->withHeader('X-Bypass-WordPress', 'true');
+        }), 'bypass_wordpress');
+        
+        return new \GuzzleHttp\Client([
+            'handler' => $handlerStack,
+            'curl' => [
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_CONNECTTIMEOUT => 10,
+            ],
+        ]);
+    }
+    
+    /**
+     * Fallback cURL implementation for when Guzzle fails.
+     *
+     * @param string $method
+     * @param string $url
+     * @param array $data
+     * @param array $headers
+     * @return array
+     */
+    private function make_request_curl(string $method, string $url, array $data = [], array $headers = []): array
+    {
+        $curl_headers = [];
+        foreach ($headers as $name => $value) {
+            $curl_headers[] = $name . ': ' . $value;
+        }
+        
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => $curl_headers,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+        ]);
+        
+        if (!empty($data) && in_array($method, ['POST', 'PUT', 'PATCH'])) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        } elseif ($method !== 'GET') {
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        }
+        
+        $body = curl_exec($ch);
+        $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_error = curl_error($ch);
+        curl_close($ch);
+        
+        if ($curl_error) {
+            throw new \Exception('cURL error: ' . $curl_error);
+        }
+        
+        if ($status_code >= 400) {
+            throw new \Exception("DataForSEO API error (HTTP {$status_code}): {$body}");
+        }
+        
+        $decoded = json_decode($body, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception("DataForSEO API returned invalid JSON: " . json_last_error_msg());
+        }
+        
+        return $decoded ?: [];
     }
 } 
