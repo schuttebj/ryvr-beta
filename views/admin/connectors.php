@@ -4,25 +4,35 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Get connector manager
-require_once RYVR_PLUGIN_DIR . 'src/Connectors/Manager.php';
-$manager = new \Ryvr\Connectors\Manager();
+// Get connector manager from global or create new instance
+global $ryvr_connector_manager;
+if (!$ryvr_connector_manager) {
+    require_once RYVR_PLUGIN_DIR . 'src/Connectors/Manager.php';
+    $ryvr_connector_manager = new \Ryvr\Connectors\Manager();
+}
+
+$manager = $ryvr_connector_manager;
 $connectors = $manager->get_connectors();
 ?>
 
-<div class="wrap">
-    <h1><?php esc_html_e('Ryvr Connectors', 'ryvr'); ?></h1>
+<div class="ryvr-admin-wrap">
+    <div class="ryvr-admin-header">
+        <h1><?php esc_html_e('Connectors', 'ryvr'); ?></h1>
+        <p class="ryvr-subtitle">
+            <?php esc_html_e('Configure API connections for your marketing automation workflows.', 'ryvr'); ?>
+        </p>
+    </div>
     
     <div class="ryvr-connectors-grid">
         <?php if (empty($connectors)) : ?>
             <div class="ryvr-notice ryvr-notice-info">
-                <p><?php esc_html_e('No connectors found.', 'ryvr'); ?></p>
+                <p><?php esc_html_e('No connectors available. Please ensure connectors are properly loaded.', 'ryvr'); ?></p>
             </div>
         <?php else : ?>
             <?php foreach ($connectors as $connector) : ?>
                 <div class="ryvr-connector-card" data-connector-id="<?php echo esc_attr($connector->get_id()); ?>">
                     <div class="ryvr-connector-header">
-                        <img src="<?php echo esc_url($connector->get_icon_url()); ?>" alt="<?php echo esc_attr($connector->get_name()); ?>" class="ryvr-connector-icon" onerror="this.src='<?php echo esc_url(RYVR_PLUGIN_URL . 'assets/images/default-connector.svg'); ?>'">
+                        <div class="ryvr-connector-icon" style="background: <?php echo esc_attr($connector->get_metadata()['brand_color'] ?? '#666666'); ?>"></div>
                         <h3 class="ryvr-connector-title"><?php echo esc_html($connector->get_name()); ?></h3>
                     </div>
                     
@@ -30,7 +40,7 @@ $connectors = $manager->get_connectors();
                         <p class="ryvr-connector-description"><?php echo esc_html($connector->get_description()); ?></p>
                         
                         <div class="ryvr-connector-actions">
-                            <button type="button" class="button ryvr-connector-configure" data-connector-id="<?php echo esc_attr($connector->get_id()); ?>">
+                            <button type="button" class="button button-primary ryvr-connector-configure" data-connector-id="<?php echo esc_attr($connector->get_id()); ?>">
                                 <?php esc_html_e('Configure', 'ryvr'); ?>
                             </button>
                             

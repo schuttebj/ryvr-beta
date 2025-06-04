@@ -161,6 +161,11 @@ class RyvrServiceProvider
             try {
                 $manager = new Connectors\Manager();
                 $manager->register_connectors();
+                
+                // Make manager available globally for admin pages
+                global $ryvr_connector_manager;
+                $ryvr_connector_manager = $manager;
+                
             } catch (\Throwable $e) {
                 // Log error but don't break the plugin
                 error_log('Ryvr: Failed to initialize connectors: ' . $e->getMessage());

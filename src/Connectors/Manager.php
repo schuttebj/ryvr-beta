@@ -167,7 +167,7 @@ class Manager
         }
         
         // Check permissions
-        if (!current_user_can('edit_ryvr_connectors')) {
+        if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'ryvr')]);
         }
         
@@ -210,7 +210,7 @@ class Manager
         }
         
         // Check permissions
-        if (!current_user_can('edit_ryvr_connectors')) {
+        if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'ryvr')]);
         }
         
@@ -288,7 +288,7 @@ class Manager
         }
         
         // Check permissions
-        if (!current_user_can('delete_ryvr_connectors')) {
+        if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'ryvr')]);
         }
         
@@ -333,7 +333,7 @@ class Manager
         }
         
         // Check permissions
-        if (!current_user_can('view_ryvr_connectors')) {
+        if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'ryvr')]);
         }
         
@@ -375,7 +375,7 @@ class Manager
         }
         
         // Check permissions
-        if (!current_user_can('view_ryvr_connectors')) {
+        if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'ryvr')]);
         }
         
