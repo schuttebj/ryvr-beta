@@ -1,0 +1,258 @@
+{
+  "basic_seo_workflow": {
+    "id": "basic-seo-workflow",
+    "name": "Basic SEO Analysis",
+    "description": "Analyze keywords and generate content suggestions",
+    "steps": [
+      {
+        "id": "keyword_research",
+        "type": "action",
+        "connector": "dataforseo",
+        "action": "keywords_for_site",
+        "params": {
+          "target": "example.com",
+          "location_code": "2840",
+          "language_code": "en",
+          "limit": 10
+        }
+      },
+      {
+        "id": "analyze_keywords",
+        "type": "action", 
+        "connector": "openai",
+        "action": "chat_completion",
+        "params": {
+          "model": "gpt-3.5-turbo",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Analyze these keywords and provide SEO recommendations: {{keyword_research.result}}"
+            }
+          ]
+        }
+      },
+      {
+        "id": "generate_content_plan",
+        "type": "action",
+        "connector": "openai", 
+        "action": "chat_completion",
+        "params": {
+          "model": "gpt-3.5-turbo",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Based on this SEO analysis: {{analyze_keywords.result}}, create a 30-day content plan with blog post topics, meta descriptions, and keyword targeting strategies."
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      ["keyword_research", "analyze_keywords"],
+      ["analyze_keywords", "generate_content_plan"]
+    ]
+  },
+  
+  "competitor_analysis": {
+    "id": "competitor-analysis", 
+    "name": "Competitor Analysis Workflow",
+    "description": "Analyze competitor keywords and backlinks",
+    "steps": [
+      {
+        "id": "competitor_keywords",
+        "type": "action",
+        "connector": "dataforseo",
+        "action": "keywords_for_site", 
+        "params": {
+          "target": "{{input.competitor_domain}}",
+          "location_code": "2840",
+          "language_code": "en",
+          "limit": 50
+        }
+      },
+      {
+        "id": "competitor_backlinks",
+        "type": "action",
+        "connector": "dataforseo",
+        "action": "backlinks_overview",
+        "params": {
+          "target": "{{input.competitor_domain}}"
+        }
+      },
+      {
+        "id": "gap_analysis",
+        "type": "action",
+        "connector": "openai",
+        "action": "chat_completion",
+        "params": {
+          "model": "gpt-4",
+          "messages": [
+            {
+              "role": "user", 
+              "content": "Analyze this competitor data:\nKeywords: {{competitor_keywords.result}}\nBacklinks: {{competitor_backlinks.result}}\n\nIdentify keyword gaps and link building opportunities for our website."
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      ["competitor_keywords", "gap_analysis"],
+      ["competitor_backlinks", "gap_analysis"]
+    ]
+  },
+
+  "content_optimization": {
+    "id": "content-optimization",
+    "name": "Content Optimization Pipeline", 
+    "description": "Optimize existing content for better SEO performance",
+    "steps": [
+      {
+        "id": "serp_analysis",
+        "type": "action",
+        "connector": "dataforseo",
+        "action": "serp_google_organic",
+        "params": {
+          "keyword": "{{input.target_keyword}}",
+          "location_code": "2840",
+          "language_code": "en",
+          "depth": 10
+        }
+      },
+      {
+        "id": "content_suggestions",
+        "type": "action",
+        "connector": "openai",
+        "action": "chat_completion", 
+        "params": {
+          "model": "gpt-4",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Based on these SERP results for '{{input.target_keyword}}': {{serp_analysis.result}}\n\nProvide content optimization suggestions including:\n1. Title improvements\n2. Meta description optimization\n3. Content structure recommendations\n4. Internal linking opportunities\n5. Featured snippet optimization"
+            }
+          ]
+        }
+      },
+      {
+        "id": "generate_outline",
+        "type": "action",
+        "connector": "openai",
+        "action": "chat_completion",
+        "params": {
+          "model": "gpt-3.5-turbo",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Create a detailed content outline for '{{input.target_keyword}}' based on these optimization suggestions: {{content_suggestions.result}}"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      ["serp_analysis", "content_suggestions"],
+      ["content_suggestions", "generate_outline"]
+    ]
+  },
+
+  "keyword_research_automation": {
+    "id": "keyword-research-automation",
+    "name": "Automated Keyword Research",
+    "description": "Generate and analyze keyword opportunities automatically",
+    "steps": [
+      {
+        "id": "seed_keywords",
+        "type": "action",
+        "connector": "dataforseo", 
+        "action": "keywords_for_keywords",
+        "params": {
+          "keywords": ["{{input.seed_keyword}}"],
+          "location_code": "2840",
+          "language_code": "en",
+          "limit": 100
+        }
+      },
+      {
+        "id": "filter_keywords",
+        "type": "action",
+        "connector": "openai",
+        "action": "chat_completion",
+        "params": {
+          "model": "gpt-3.5-turbo",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Filter these keywords for commercial intent and search volume > 500: {{seed_keywords.result}}. Return only the top 20 most valuable keywords in JSON format."
+            }
+          ]
+        }
+      },
+      {
+        "id": "categorize_keywords",
+        "type": "action", 
+        "connector": "openai",
+        "action": "chat_completion",
+        "params": {
+          "model": "gpt-3.5-turbo",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Categorize these keywords by intent (informational, commercial, transactional) and create ad groups: {{filter_keywords.result}}"
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      ["seed_keywords", "filter_keywords"],
+      ["filter_keywords", "categorize_keywords"]
+    ]
+  },
+
+  "link_building_pipeline": {
+    "id": "link-building-pipeline",
+    "name": "Link Building Opportunity Pipeline",
+    "description": "Identify and analyze link building opportunities",
+    "steps": [
+      {
+        "id": "competitor_backlinks",
+        "type": "action",
+        "connector": "dataforseo",
+        "action": "referring_domains",
+        "params": {
+          "target": "{{input.competitor_domain}}",
+          "limit": 100
+        }
+      },
+      {
+        "id": "our_backlinks", 
+        "type": "action",
+        "connector": "dataforseo",
+        "action": "referring_domains",
+        "params": {
+          "target": "{{input.our_domain}}",
+          "limit": 100
+        }
+      },
+      {
+        "id": "find_opportunities",
+        "type": "action",
+        "connector": "openai",
+        "action": "chat_completion",
+        "params": {
+          "model": "gpt-4",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Compare these backlink profiles:\nCompetitor domains: {{competitor_backlinks.result}}\nOur domains: {{our_backlinks.result}}\n\nIdentify unique link opportunities and provide outreach strategies."
+            }
+          ]
+        }
+      }
+    ],
+    "edges": [
+      ["competitor_backlinks", "find_opportunities"],
+      ["our_backlinks", "find_opportunities"]
+    ]
+  }
+} 

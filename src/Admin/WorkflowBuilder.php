@@ -23,6 +23,7 @@ class WorkflowBuilder
         // AJAX endpoints
         add_action('wp_ajax_ryvr_get_connectors', [$this, 'get_connectors']);
         add_action('wp_ajax_ryvr_get_openai_models', [$this, 'get_openai_models']);
+        add_action('wp_ajax_ryvr_get_sample_workflows', [$this, 'get_sample_workflows']);
         add_action('wp_ajax_ryvr_save_workflow', [$this, 'save_workflow']);
         add_action('wp_ajax_ryvr_load_workflow', [$this, 'load_workflow']);
     }
@@ -98,6 +99,9 @@ class WorkflowBuilder
                     <button type="button" class="ryvr-btn ryvr-btn-secondary" onclick="loadWorkflow()">
                         📁 Load Workflow
                     </button>
+                    <button type="button" class="ryvr-btn ryvr-btn-secondary" onclick="loadSampleWorkflows()">
+                        📋 Load Template
+                    </button>
                     <button type="button" class="ryvr-btn ryvr-btn-secondary" onclick="exportWorkflow()">
                         📤 Export JSON
                     </button>
@@ -172,6 +176,105 @@ class WorkflowBuilder
                 console.error('Error:', error);
                 alert('Failed to load workflow');
             });
+        }
+        
+        function loadSampleWorkflows() {
+            fetch('/wp-admin/admin-ajax.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'ryvr_get_sample_workflows',
+                    nonce: ryvrWorkflowBuilder.nonce
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSampleWorkflowModal(data.data);
+                } else {
+                    alert('Failed to load sample workflows: ' + (data.data || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to load sample workflows');
+            });
+        }
+        
+        function showSampleWorkflowModal(workflows) {
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('ryvr-sample-workflows-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'ryvr-sample-workflows-modal';
+                modal.className = 'ryvr-modal';
+                modal.style.display = 'none';
+                document.body.appendChild(modal);
+            }
+            
+            const workflowOptions = Object.entries(workflows).map(([key, workflow]) => `
+                <div class="sample-workflow-option" data-workflow-key="${key}">
+                    <h4>${workflow.name}</h4>
+                    <p>${workflow.description}</p>
+                    <button class="ryvr-btn ryvr-btn-primary" onclick="loadSampleWorkflow('${key}')">Load Template</button>
+                </div>
+            `).join('');
+            
+            modal.innerHTML = `
+                <div class="ryvr-modal-content">
+                    <div class="ryvr-modal-header">
+                        <h3>Select Workflow Template</h3>
+                        <button class="ryvr-modal-close" onclick="closeSampleWorkflowModal()">&times;</button>
+                    </div>
+                    <div class="ryvr-modal-body">
+                        <div class="sample-workflows-grid">
+                            ${workflowOptions}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+        
+        function loadSampleWorkflow(workflowKey) {
+            fetch('/wp-admin/admin-ajax.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'ryvr_get_sample_workflows',
+                    nonce: ryvrWorkflowBuilder.nonce,
+                    workflow_key: workflowKey
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && ryvrWorkflowBuilderInstance) {
+                    const workflow = data.data[workflowKey];
+                    if (workflow) {
+                        ryvrWorkflowBuilderInstance.loadWorkflow(JSON.stringify(workflow));
+                        closeSampleWorkflowModal();
+                        alert(`Template "${workflow.name}" loaded successfully!`);
+                    }
+                } else {
+                    alert('Failed to load sample workflow: ' + (data.data || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to load sample workflow');
+            });
+        }
+        
+        function closeSampleWorkflowModal() {
+            const modal = document.getElementById('ryvr-sample-workflows-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
         }
         
         function exportWorkflow() {
@@ -271,6 +374,49 @@ class WorkflowBuilder
             ];
             
             wp_send_json_success($default_models);
+        }
+    }
+
+    /**
+     * AJAX handler to get sample workflows.
+     *
+     * @return void
+     */
+    public function get_sample_workflows(): void
+    {
+        check_ajax_referer('ryvr_workflow_builder', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have permission to access this endpoint.', 'ryvr'));
+        }
+
+        try {
+            $sample_workflows_file = RYVR_PLUGIN_DIR . 'examples/sample-workflows.json';
+            
+            if (!file_exists($sample_workflows_file)) {
+                wp_send_json_error('Sample workflows file not found');
+                return;
+            }
+            
+            $sample_workflows_content = file_get_contents($sample_workflows_file);
+            $sample_workflows = json_decode($sample_workflows_content, true);
+            
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                wp_send_json_error('Invalid sample workflows JSON: ' . json_last_error_msg());
+                return;
+            }
+            
+            // If a specific workflow key is requested, return just that workflow
+            $workflow_key = sanitize_text_field($_POST['workflow_key'] ?? '');
+            if (!empty($workflow_key) && isset($sample_workflows[$workflow_key])) {
+                wp_send_json_success([$workflow_key => $sample_workflows[$workflow_key]]);
+                return;
+            }
+            
+            wp_send_json_success($sample_workflows);
+
+        } catch (\Exception $e) {
+            wp_send_json_error('Failed to load sample workflows: ' . $e->getMessage());
         }
     }
 

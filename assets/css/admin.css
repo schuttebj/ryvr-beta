@@ -776,4 +776,68 @@
 .ryvr-notice p {
     margin: 0;
     font-weight: 500;
+}
+
+/* Sample Workflow Modal Styles */
+.sample-workflows-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.sample-workflow-option {
+    background: var(--ryvr-background);
+    border: 1px solid var(--ryvr-border);
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+}
+
+.sample-workflow-option:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--ryvr-shadow);
+    border-color: var(--ryvr-light);
+}
+
+.sample-workflow-option h4 {
+    color: var(--ryvr-primary);
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.sample-workflow-option p {
+    color: var(--ryvr-secondary);
+    font-size: 14px;
+    margin: 0 0 12px 0;
+    line-height: 1.4;
+}
+
+.sample-workflow-option .ryvr-btn {
+    width: 100%;
+    margin-top: 8px;
+}
+
+/* Enhanced Modal Styles */
+.ryvr-modal-header h3 {
+    color: var(--ryvr-primary);
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.ryvr-modal-content {
+    max-width: 900px;
+}
+
+/* Workflow Builder Container Enhancement */
+.ryvr-workflow-builder-container {
+    background: var(--ryvr-white);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--ryvr-shadow-lg);
+    border: 1px solid var(--ryvr-border);
+    min-height: 600px;
 } 
