@@ -108,8 +108,8 @@ class OpenAIConnector extends AbstractConnector
                 'label' => __('Custom API Endpoint', 'ryvr'),
                 'type' => 'text',
                 'required' => false,
-                'description' => __('Custom API endpoint URL (for testing or specific deployments).', 'ryvr'),
-                'placeholder' => 'https://api.example.com/v1',
+                'description' => __('Custom base API URL (e.g., https://api.openai.com/v1 or your proxy URL). Leave empty to use default OpenAI API.', 'ryvr'),
+                'placeholder' => 'https://api.openai.com/v1',
             ],
         ];
     }
@@ -149,13 +149,26 @@ class OpenAIConnector extends AbstractConnector
      */
     public function validate_auth(array $credentials): bool
     {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: OpenAI validate_auth called with credentials: ' . print_r($credentials, true));
+        }
+        
         if (empty($credentials['api_key'])) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: OpenAI validation failed - missing API key');
+            }
             return false;
         }
         
         try {
             $client = $this->getClient();
             $api_url = $this->getApiUrl($credentials);
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: OpenAI making request to: ' . $api_url . '/models');
+                error_log('Ryvr: OpenAI API key length: ' . strlen($credentials['api_key']));
+                error_log('Ryvr: OpenAI API key starts with: ' . substr($credentials['api_key'], 0, 10) . '...');
+            }
             
             $headers = [
                 'Authorization' => 'Bearer ' . $credentials['api_key'],
@@ -164,19 +177,67 @@ class OpenAIConnector extends AbstractConnector
             
             if (!empty($credentials['organization_id'])) {
                 $headers['OpenAI-Organization'] = $credentials['organization_id'];
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Ryvr: OpenAI using organization ID: ' . $credentials['organization_id']);
+                }
+            }
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: OpenAI request headers: ' . print_r($headers, true));
             }
             
             $response = $client->request('GET', $api_url . '/models', [
                 'headers' => $headers,
+                'timeout' => 30,
             ]);
             
-            return $response->getStatusCode() === 200;
-        } catch (GuzzleException $e) {
-            $this->log(
-                'Failed to validate OpenAI credentials: ' . $e->getMessage(),
-                ['error' => $e->getMessage()],
-                'error'
-            );
+            $status_code = $response->getStatusCode();
+            $body = $response->getBody()->getContents();
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: OpenAI response status: ' . $status_code);
+                error_log('Ryvr: OpenAI response body (first 200 chars): ' . substr($body, 0, 200));
+            }
+            
+            $success = $status_code === 200;
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: OpenAI validation result: ' . ($success ? 'SUCCESS' : 'FAILED'));
+            }
+            
+            return $success;
+            
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            $status_code = $e->getResponse() ? $e->getResponse()->getStatusCode() : 'unknown';
+            $response_body = $e->getResponse() ? $e->getResponse()->getBody()->getContents() : 'no response';
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: OpenAI ClientException - Status: ' . $status_code);
+                error_log('Ryvr: OpenAI ClientException - Response: ' . $response_body);
+                error_log('Ryvr: OpenAI ClientException - Message: ' . $e->getMessage());
+            }
+            
+            return false;
+            
+        } catch (\GuzzleHttp\Exception\ServerException $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: OpenAI ServerException: ' . $e->getMessage());
+            }
+            
+            return false;
+            
+        } catch (\GuzzleHttp\Exception\ConnectException $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: OpenAI ConnectException: ' . $e->getMessage());
+            }
+            
+            return false;
+            
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: OpenAI general exception: ' . $e->getMessage());
+                error_log('Ryvr: OpenAI exception trace: ' . $e->getTraceAsString());
+            }
             
             return false;
         }
