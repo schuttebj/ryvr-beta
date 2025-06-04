@@ -136,34 +136,27 @@ class MetaConnector extends AbstractConnector
     /**
      * Validate authentication credentials.
      *
-     * @param array $auth
-     * @return array
+     * @param array $credentials
+     * @return bool
      */
-    public function validate_auth(array $auth): array
+    public function validate_auth(array $credentials): bool
     {
         // Placeholder validation - always returns success for demo
-        return [
-            'valid' => true,
-            'message' => 'Meta credentials validated successfully (placeholder)',
-            'account_info' => [
-                'app_id' => $auth['app_id'] ?? 'demo_app_123',
-                'page_name' => 'Demo Business Page',
-                'page_id' => $auth['page_id'] ?? 'demo_page_456'
-            ]
-        ];
+        return true;
     }
 
     /**
      * Execute an action.
      *
-     * @param string $action
+     * @param string $action_id
      * @param array $params
+     * @param array $auth
      * @return array
      */
-    public function execute_action(string $action, array $params = []): array
+    public function execute_action(string $action_id, array $params, array $auth): array
     {
         // Placeholder execution - returns dummy data for demo
-        switch ($action) {
+        switch ($action_id) {
             case 'create_facebook_post':
                 return [
                     'success' => true,
@@ -216,7 +209,7 @@ class MetaConnector extends AbstractConnector
             default:
                 return [
                     'success' => true,
-                    'data' => ['message' => "Placeholder response for action: {$action}"]
+                    'data' => ['message' => "Placeholder response for action: {$action_id}"]
                 ];
         }
     }

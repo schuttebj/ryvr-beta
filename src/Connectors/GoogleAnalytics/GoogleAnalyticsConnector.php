@@ -120,33 +120,27 @@ class GoogleAnalyticsConnector extends AbstractConnector
     /**
      * Validate authentication credentials.
      *
-     * @param array $auth
-     * @return array
+     * @param array $credentials
+     * @return bool
      */
-    public function validate_auth(array $auth): array
+    public function validate_auth(array $credentials): bool
     {
         // Placeholder validation - always returns success for demo
-        return [
-            'valid' => true,
-            'message' => 'Google Analytics credentials validated successfully (placeholder)',
-            'account_info' => [
-                'property_id' => $auth['property_id'] ?? 'DEMO-GA4-123456789',
-                'property_name' => 'Demo Website - GA4'
-            ]
-        ];
+        return true;
     }
 
     /**
      * Execute an action.
      *
-     * @param string $action
+     * @param string $action_id
      * @param array $params
+     * @param array $auth
      * @return array
      */
-    public function execute_action(string $action, array $params = []): array
+    public function execute_action(string $action_id, array $params, array $auth): array
     {
         // Placeholder execution - returns dummy data for demo
-        switch ($action) {
+        switch ($action_id) {
             case 'get_website_overview':
                 return [
                     'success' => true,
@@ -182,7 +176,7 @@ class GoogleAnalyticsConnector extends AbstractConnector
             default:
                 return [
                     'success' => true,
-                    'data' => ['message' => "Placeholder response for action: {$action}"]
+                    'data' => ['message' => "Placeholder response for action: {$action_id}"]
                 ];
         }
     }

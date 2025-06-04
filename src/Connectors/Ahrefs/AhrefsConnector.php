@@ -110,34 +110,27 @@ class AhrefsConnector extends AbstractConnector
     /**
      * Validate authentication credentials.
      *
-     * @param array $auth
-     * @return array
+     * @param array $credentials
+     * @return bool
      */
-    public function validate_auth(array $auth): array
+    public function validate_auth(array $credentials): bool
     {
         // Placeholder validation - always returns success for demo
-        return [
-            'valid' => true,
-            'message' => 'Ahrefs API token validated successfully (placeholder)',
-            'account_info' => [
-                'token' => substr($auth['api_token'] ?? 'demo_token', 0, 8) . '...',
-                'plan' => 'Demo Plan',
-                'credits_remaining' => 1000
-            ]
-        ];
+        return true;
     }
 
     /**
      * Execute an action.
      *
-     * @param string $action
+     * @param string $action_id
      * @param array $params
+     * @param array $auth
      * @return array
      */
-    public function execute_action(string $action, array $params = []): array
+    public function execute_action(string $action_id, array $params, array $auth): array
     {
         // Placeholder execution - returns dummy data for demo
-        switch ($action) {
+        switch ($action_id) {
             case 'get_domain_metrics':
                 return [
                     'success' => true,
@@ -188,7 +181,7 @@ class AhrefsConnector extends AbstractConnector
             default:
                 return [
                     'success' => true,
-                    'data' => ['message' => "Placeholder response for action: {$action}"]
+                    'data' => ['message' => "Placeholder response for action: {$action_id}"]
                 ];
         }
     }

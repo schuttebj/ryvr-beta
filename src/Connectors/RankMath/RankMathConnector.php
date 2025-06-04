@@ -124,34 +124,27 @@ class RankMathConnector extends AbstractConnector
     /**
      * Validate authentication credentials.
      *
-     * @param array $auth
-     * @return array
+     * @param array $credentials
+     * @return bool
      */
-    public function validate_auth(array $auth): array
+    public function validate_auth(array $credentials): bool
     {
         // Placeholder validation - always returns success for demo
-        return [
-            'valid' => true,
-            'message' => 'RankMath connection validated successfully (placeholder)',
-            'account_info' => [
-                'site_url' => $auth['site_url'] ?? 'https://demo-site.com',
-                'plugin_version' => '1.0.200',
-                'license_status' => 'Demo License'
-            ]
-        ];
+        return true;
     }
 
     /**
      * Execute an action.
      *
-     * @param string $action
+     * @param string $action_id
      * @param array $params
+     * @param array $auth
      * @return array
      */
-    public function execute_action(string $action, array $params = []): array
+    public function execute_action(string $action_id, array $params, array $auth): array
     {
         // Placeholder execution - returns dummy data for demo
-        switch ($action) {
+        switch ($action_id) {
             case 'analyze_content':
                 return [
                     'success' => true,
@@ -196,7 +189,7 @@ class RankMathConnector extends AbstractConnector
             default:
                 return [
                     'success' => true,
-                    'data' => ['message' => "Placeholder response for action: {$action}"]
+                    'data' => ['message' => "Placeholder response for action: {$action_id}"]
                 ];
         }
     }
