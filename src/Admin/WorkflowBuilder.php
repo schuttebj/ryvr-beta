@@ -26,6 +26,11 @@ class WorkflowBuilder
         add_action('wp_ajax_ryvr_get_sample_workflows', [$this, 'get_sample_workflows']);
         add_action('wp_ajax_ryvr_save_workflow', [$this, 'save_workflow']);
         add_action('wp_ajax_ryvr_load_workflow', [$this, 'load_workflow']);
+        
+        // Add debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: WorkflowBuilder AJAX handlers registered');
+        }
     }
 
     /**
@@ -122,7 +127,7 @@ class WorkflowBuilder
             
             if (!workflowName) return;
             
-            fetch('/wp-admin/admin-ajax.php', {
+            fetch(ryvrWorkflowBuilder.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -152,7 +157,7 @@ class WorkflowBuilder
             const workflowId = prompt('Enter workflow ID to load:');
             if (!workflowId) return;
             
-            fetch('/wp-admin/admin-ajax.php', {
+            fetch(ryvrWorkflowBuilder.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -179,7 +184,7 @@ class WorkflowBuilder
         }
         
         function loadSampleWorkflows() {
-            fetch('/wp-admin/admin-ajax.php', {
+            fetch(ryvrWorkflowBuilder.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -240,7 +245,7 @@ class WorkflowBuilder
         }
         
         function loadSampleWorkflow(workflowKey) {
-            fetch('/wp-admin/admin-ajax.php', {
+            fetch(ryvrWorkflowBuilder.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -303,10 +308,35 @@ class WorkflowBuilder
      */
     public function get_connectors(): void
     {
-        check_ajax_referer('ryvr_workflow_builder', 'nonce');
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: get_connectors AJAX handler called');
+            error_log('Ryvr: POST data: ' . print_r($_POST, true));
+        }
+        
+        // Check if nonce is provided
+        if (!isset($_POST['nonce'])) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: No nonce provided in request');
+            }
+            wp_send_json_error('No nonce provided');
+            return;
+        }
+        
+        // Check nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'ryvr_workflow_builder')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Nonce verification failed. Provided: ' . $_POST['nonce']);
+            }
+            wp_send_json_error('Invalid nonce');
+            return;
+        }
 
         if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have permission to access this endpoint.', 'ryvr'));
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: User does not have manage_options capability');
+            }
+            wp_send_json_error('Insufficient permissions');
+            return;
         }
 
         try {
@@ -314,6 +344,9 @@ class WorkflowBuilder
             global $ryvr_connector_manager;
             
             if (!$ryvr_connector_manager) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Ryvr: Global connector manager not found, creating fallback');
+                }
                 // Fallback: create manager if not available
                 require_once RYVR_PLUGIN_DIR . 'src/Connectors/Manager.php';
                 $ryvr_connector_manager = new \Ryvr\Connectors\Manager();
@@ -321,6 +354,10 @@ class WorkflowBuilder
             
             $connectors = [];
             $available_connectors = $ryvr_connector_manager->get_connectors();
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Found ' . count($available_connectors) . ' connectors');
+            }
             
             foreach ($available_connectors as $connector_id => $connector) {
                 $connectors[$connector_id] = [
@@ -332,6 +369,10 @@ class WorkflowBuilder
             wp_send_json_success($connectors);
 
         } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Exception in get_connectors: ' . $e->getMessage());
+                error_log('Ryvr: Exception trace: ' . $e->getTraceAsString());
+            }
             wp_send_json_error('Failed to load connectors: ' . $e->getMessage());
         }
     }

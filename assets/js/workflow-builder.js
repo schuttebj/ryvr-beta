@@ -80,10 +80,15 @@ class RyvrWorkflowBuilder {
     async loadConnectors() {
         try {
             console.log('Workflow Builder: Loading connectors...');
-            console.log('AJAX URL:', '/wp-admin/admin-ajax.php');
+            console.log('AJAX URL:', ryvrWorkflowBuilder.ajax_url);
             console.log('Nonce:', ryvrWorkflowBuilder.nonce);
             
-            const response = await fetch('/wp-admin/admin-ajax.php', {
+            if (!ryvrWorkflowBuilder.nonce) {
+                console.error('No nonce available - WordPress localization may have failed');
+                return;
+            }
+            
+            const response = await fetch(ryvrWorkflowBuilder.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -95,6 +100,11 @@ class RyvrWorkflowBuilder {
             });
             
             console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
             console.log('Response data:', data);
             
@@ -104,15 +114,22 @@ class RyvrWorkflowBuilder {
                 this.renderConnectorsList();
             } else {
                 console.error('Failed to load connectors:', data.data || data);
+                this.showConnectorError('Failed to load connectors: ' + (data.data || 'Unknown error'));
             }
         } catch (error) {
             console.error('Failed to load connectors:', error);
+            this.showConnectorError('Failed to load connectors: ' + error.message);
         }
     }
     
     async loadAvailableModels() {
         try {
-            const response = await fetch('/wp-admin/admin-ajax.php', {
+            if (!ryvrWorkflowBuilder.nonce) {
+                console.error('No nonce available for loading models');
+                return;
+            }
+            
+            const response = await fetch(ryvrWorkflowBuilder.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -123,9 +140,16 @@ class RyvrWorkflowBuilder {
                 })
             });
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
             if (data.success) {
                 this.availableModels = data.data;
+                console.log('Loaded OpenAI models:', this.availableModels);
+            } else {
+                console.error('Failed to load OpenAI models:', data.data || 'Unknown error');
             }
         } catch (error) {
             console.error('Failed to load OpenAI models:', error);
@@ -560,6 +584,18 @@ class RyvrWorkflowBuilder {
         } catch (error) {
             console.error('Failed to load workflow:', error);
         }
+    }
+    
+    showConnectorError(message) {
+        const connectorsContainer = this.sidebarElement.querySelector('.ryvr-connectors-list');
+        connectorsContainer.innerHTML = `
+            <div class="ryvr-error-state">
+                <div class="icon">⚠️</div>
+                <h4>Error Loading Connectors</h4>
+                <p>${message}</p>
+                <button class="ryvr-btn ryvr-btn-secondary" onclick="location.reload()">Retry</button>
+            </div>
+        `;
     }
 }
 
