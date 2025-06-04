@@ -186,17 +186,54 @@ class Manager
         // Get connector and credentials
         $connector_id = sanitize_text_field($_POST['connector_id'] ?? '');
         $credentials = isset($_POST['credentials']) ? json_decode(stripslashes($_POST['credentials']), true) : [];
+        $user_id = get_current_user_id();
+        
+        if (empty($connector_id) || !is_array($credentials) || !$user_id) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Invalid request parameters in validate_auth');
+            }
+            wp_send_json_error(['message' => __('Invalid request parameters.', 'ryvr')]);
+        }
+        
+        // Handle [USE_SAVED] markers by loading saved credentials
+        $has_saved_markers = false;
+        foreach ($credentials as $key => $value) {
+            if ($value === '[USE_SAVED]') {
+                $has_saved_markers = true;
+                break;
+            }
+        }
+        
+        if ($has_saved_markers) {
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'ryvr_api_keys';
+            
+            $result = $wpdb->get_var($wpdb->prepare(
+                "SELECT auth_meta FROM {$table_name} WHERE connector_slug = %s AND user_id = %d",
+                $connector_id,
+                $user_id
+            ));
+            
+            if ($result) {
+                $saved_encrypted = json_decode($result, true);
+                if (is_array($saved_encrypted)) {
+                    require_once RYVR_PLUGIN_DIR . 'src/Security/Encryption.php';
+                    
+                    foreach ($credentials as $key => $value) {
+                        if ($value === '[USE_SAVED]' && isset($saved_encrypted[$key])) {
+                            $decrypted = \Ryvr\Security\Encryption::decrypt($saved_encrypted[$key]);
+                            if ($decrypted !== false) {
+                                $credentials[$key] = $decrypted;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('Ryvr: Validating credentials for connector: ' . $connector_id);
             error_log('Ryvr: Credentials keys: ' . print_r(array_keys($credentials), true));
-        }
-        
-        if (empty($connector_id) || !is_array($credentials)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Ryvr: Invalid parameters in validate_auth - connector_id: ' . $connector_id . ', credentials type: ' . gettype($credentials));
-            }
-            wp_send_json_error(['message' => __('Invalid request parameters.', 'ryvr')]);
         }
         
         $connector = $this->get_connector($connector_id);
@@ -271,8 +308,34 @@ class Manager
         require_once RYVR_PLUGIN_DIR . 'src/Security/Encryption.php';
         $encrypted_data = [];
         
+        // Get existing credentials if we need to keep some values
+        $existing_credentials = [];
+        if ($existing) {
+            $existing_result = $wpdb->get_var($wpdb->prepare(
+                "SELECT auth_meta FROM {$table_name} WHERE id = %d",
+                $existing
+            ));
+            
+            if ($existing_result) {
+                $existing_encrypted = json_decode($existing_result, true);
+                if (is_array($existing_encrypted)) {
+                    foreach ($existing_encrypted as $key => $value) {
+                        if (is_string($value)) {
+                            $decrypted = \Ryvr\Security\Encryption::decrypt($value);
+                            if ($decrypted !== false) {
+                                $existing_credentials[$key] = $decrypted;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         foreach ($credentials as $key => $value) {
-            if (is_string($value)) {
+            if ($value === '[KEEP_EXISTING]' && isset($existing_credentials[$key])) {
+                // Use existing value for this field
+                $encrypted_data[$key] = \Ryvr\Security\Encryption::encrypt($existing_credentials[$key]);
+            } elseif (is_string($value) && $value !== '[KEEP_EXISTING]') {
                 $encrypted_data[$key] = \Ryvr\Security\Encryption::encrypt($value);
             } else {
                 $encrypted_data[$key] = $value;
@@ -478,7 +541,7 @@ class Manager
                         if ($decrypted !== false) {
                             // Don't send actual values for password fields
                             if (isset($fields[$key]) && $fields[$key]['type'] === 'password') {
-                                $saved_credentials[$key] = '';
+                                $saved_credentials[$key] = $decrypted ? '[SAVED]' : '';
                             } else {
                                 $saved_credentials[$key] = $decrypted;
                             }

@@ -224,7 +224,12 @@ jQuery(document).ready(function($) {
                         formHtml += '<label for="ryvr-auth-' + key + '">' + field.label + '</label>';
                         
                         if (field.type === 'password') {
-                            formHtml += '<input type="password" id="ryvr-auth-' + key + '" name="' + key + '" class="regular-text" placeholder="' + (field.placeholder || '') + '" ' + (field.required ? 'required' : '') + '>';
+                            var hasValue = credentials[key] === '[SAVED]';
+                            var placeholderText = hasValue ? 'Password saved (leave empty to keep current)' : (field.placeholder || '');
+                            formHtml += '<input type="password" id="ryvr-auth-' + key + '" name="' + key + '" class="regular-text" placeholder="' + placeholderText + '" ' + (field.required ? 'required' : '') + '>';
+                            if (hasValue) {
+                                formHtml += '<input type="hidden" id="ryvr-auth-' + key + '-saved" name="' + key + '_saved" value="true">';
+                            }
                         } else if (field.type === 'checkbox') {
                             var checked = credentials[key] ? 'checked' : '';
                             formHtml += '<input type="checkbox" id="ryvr-auth-' + key + '" name="' + key + '" value="1" ' + checked + ' ' + (field.required ? 'required' : '') + '>';
@@ -260,8 +265,21 @@ jQuery(document).ready(function($) {
         // Collect form values
         $('#ryvr-auth-form input').each(function() {
             var name = $(this).attr('name');
-            if ($(this).attr('type') === 'checkbox') {
+            var type = $(this).attr('type');
+            
+            if (type === 'checkbox') {
                 credentials[name] = $(this).is(':checked');
+            } else if (type === 'hidden' && name.endsWith('_saved')) {
+                // Skip hidden saved indicators, they're handled below
+                return;
+            } else if (type === 'password') {
+                var value = $(this).val();
+                // If password field is empty but there's a saved indicator, keep existing
+                if (!value && $('#ryvr-auth-' + name + '-saved').length > 0) {
+                    credentials[name] = '[KEEP_EXISTING]';
+                } else {
+                    credentials[name] = value;
+                }
             } else {
                 credentials[name] = $(this).val();
             }
@@ -307,8 +325,21 @@ jQuery(document).ready(function($) {
         // Collect form values
         $('#ryvr-auth-form input').each(function() {
             var name = $(this).attr('name');
-            if ($(this).attr('type') === 'checkbox') {
+            var type = $(this).attr('type');
+            
+            if (type === 'checkbox') {
                 credentials[name] = $(this).is(':checked');
+            } else if (type === 'hidden' && name.endsWith('_saved')) {
+                // Skip hidden saved indicators, they're handled below
+                return;
+            } else if (type === 'password') {
+                var value = $(this).val();
+                // If password field is empty but there's a saved indicator, use special marker
+                if (!value && $('#ryvr-auth-' + name + '-saved').length > 0) {
+                    credentials[name] = '[USE_SAVED]';
+                } else {
+                    credentials[name] = value;
+                }
             } else {
                 credentials[name] = $(this).val();
             }
