@@ -13,6 +13,36 @@ use Ryvr\Connectors\AbstractConnector;
 class WordPressConnector extends AbstractConnector
 {
     /**
+     * Get the connector ID.
+     *
+     * @return string
+     */
+    public function get_id(): string
+    {
+        return 'wordpress';
+    }
+
+    /**
+     * Get the connector name.
+     *
+     * @return string
+     */
+    public function get_name(): string
+    {
+        return 'WordPress';
+    }
+
+    /**
+     * Get the connector description.
+     *
+     * @return string
+     */
+    public function get_description(): string
+    {
+        return 'Manage WordPress content, posts, pages, and site settings';
+    }
+
+    /**
      * Get connector metadata.
      *
      * @return array
@@ -112,6 +142,16 @@ class WordPressConnector extends AbstractConnector
                 ]
             ]
         ];
+    }
+
+    /**
+     * Get available triggers.
+     *
+     * @return array
+     */
+    public function get_triggers(): array
+    {
+        return [];
     }
 
     /**

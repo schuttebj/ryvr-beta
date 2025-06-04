@@ -13,6 +13,36 @@ use Ryvr\Connectors\AbstractConnector;
 class AhrefsConnector extends AbstractConnector
 {
     /**
+     * Get the connector ID.
+     *
+     * @return string
+     */
+    public function get_id(): string
+    {
+        return 'ahrefs';
+    }
+
+    /**
+     * Get the connector name.
+     *
+     * @return string
+     */
+    public function get_name(): string
+    {
+        return 'Ahrefs';
+    }
+
+    /**
+     * Get the connector description.
+     *
+     * @return string
+     */
+    public function get_description(): string
+    {
+        return 'SEO analysis, backlink tracking, and keyword research';
+    }
+
+    /**
      * Get connector metadata.
      *
      * @return array
@@ -88,6 +118,16 @@ class AhrefsConnector extends AbstractConnector
                 ]
             ]
         ];
+    }
+
+    /**
+     * Get available triggers.
+     *
+     * @return array
+     */
+    public function get_triggers(): array
+    {
+        return [];
     }
 
     /**

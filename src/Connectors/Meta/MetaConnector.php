@@ -13,6 +13,36 @@ use Ryvr\Connectors\AbstractConnector;
 class MetaConnector extends AbstractConnector
 {
     /**
+     * Get the connector ID.
+     *
+     * @return string
+     */
+    public function get_id(): string
+    {
+        return 'meta';
+    }
+
+    /**
+     * Get the connector name.
+     *
+     * @return string
+     */
+    public function get_name(): string
+    {
+        return 'Meta';
+    }
+
+    /**
+     * Get the connector description.
+     *
+     * @return string
+     */
+    public function get_description(): string
+    {
+        return 'Manage Facebook and Instagram posts, pages, and advertising campaigns';
+    }
+
+    /**
      * Get connector metadata.
      *
      * @return array
@@ -96,6 +126,16 @@ class MetaConnector extends AbstractConnector
                 ]
             ]
         ];
+    }
+
+    /**
+     * Get available triggers.
+     *
+     * @return array
+     */
+    public function get_triggers(): array
+    {
+        return [];
     }
 
     /**

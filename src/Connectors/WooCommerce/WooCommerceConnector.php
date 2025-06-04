@@ -13,6 +13,36 @@ use Ryvr\Connectors\AbstractConnector;
 class WooCommerceConnector extends AbstractConnector
 {
     /**
+     * Get the connector ID.
+     *
+     * @return string
+     */
+    public function get_id(): string
+    {
+        return 'woocommerce';
+    }
+
+    /**
+     * Get the connector name.
+     *
+     * @return string
+     */
+    public function get_name(): string
+    {
+        return 'WooCommerce';
+    }
+
+    /**
+     * Get the connector description.
+     *
+     * @return string
+     */
+    public function get_description(): string
+    {
+        return 'Manage WooCommerce products, orders, and store analytics';
+    }
+
+    /**
      * Get connector metadata.
      *
      * @return array
@@ -112,6 +142,16 @@ class WooCommerceConnector extends AbstractConnector
                 ]
             ]
         ];
+    }
+
+    /**
+     * Get available triggers.
+     *
+     * @return array
+     */
+    public function get_triggers(): array
+    {
+        return [];
     }
 
     /**

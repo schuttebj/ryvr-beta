@@ -13,6 +13,36 @@ use Ryvr\Connectors\AbstractConnector;
 class GoogleAnalyticsConnector extends AbstractConnector
 {
     /**
+     * Get the connector ID.
+     *
+     * @return string
+     */
+    public function get_id(): string
+    {
+        return 'google_analytics';
+    }
+
+    /**
+     * Get the connector name.
+     *
+     * @return string
+     */
+    public function get_name(): string
+    {
+        return 'Google Analytics';
+    }
+
+    /**
+     * Get the connector description.
+     *
+     * @return string
+     */
+    public function get_description(): string
+    {
+        return 'Retrieve website analytics data and insights';
+    }
+
+    /**
      * Get connector metadata.
      *
      * @return array
@@ -80,6 +110,16 @@ class GoogleAnalyticsConnector extends AbstractConnector
                 ]
             ]
         ];
+    }
+
+    /**
+     * Get available triggers.
+     *
+     * @return array
+     */
+    public function get_triggers(): array
+    {
+        return [];
     }
 
     /**

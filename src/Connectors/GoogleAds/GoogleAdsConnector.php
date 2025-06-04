@@ -13,6 +13,36 @@ use Ryvr\Connectors\AbstractConnector;
 class GoogleAdsConnector extends AbstractConnector
 {
     /**
+     * Get the connector ID.
+     *
+     * @return string
+     */
+    public function get_id(): string
+    {
+        return 'google_ads';
+    }
+
+    /**
+     * Get the connector name.
+     *
+     * @return string
+     */
+    public function get_name(): string
+    {
+        return 'Google Ads';
+    }
+
+    /**
+     * Get the connector description.
+     *
+     * @return string
+     */
+    public function get_description(): string
+    {
+        return 'Manage Google Ads campaigns, keywords, and performance data';
+    }
+
+    /**
      * Get connector metadata.
      *
      * @return array
@@ -80,6 +110,16 @@ class GoogleAdsConnector extends AbstractConnector
                 ]
             ]
         ];
+    }
+
+    /**
+     * Get available triggers.
+     *
+     * @return array
+     */
+    public function get_triggers(): array
+    {
+        return [];
     }
 
     /**

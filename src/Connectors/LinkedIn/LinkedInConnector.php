@@ -13,6 +13,36 @@ use Ryvr\Connectors\AbstractConnector;
 class LinkedInConnector extends AbstractConnector
 {
     /**
+     * Get the connector ID.
+     *
+     * @return string
+     */
+    public function get_id(): string
+    {
+        return 'linkedin';
+    }
+
+    /**
+     * Get the connector name.
+     *
+     * @return string
+     */
+    public function get_name(): string
+    {
+        return 'LinkedIn';
+    }
+
+    /**
+     * Get the connector description.
+     *
+     * @return string
+     */
+    public function get_description(): string
+    {
+        return 'Manage LinkedIn posts, company pages, and advertising campaigns';
+    }
+
+    /**
      * Get connector metadata.
      *
      * @return array
@@ -96,6 +126,16 @@ class LinkedInConnector extends AbstractConnector
                 ]
             ]
         ];
+    }
+
+    /**
+     * Get available triggers.
+     *
+     * @return array
+     */
+    public function get_triggers(): array
+    {
+        return [];
     }
 
     /**

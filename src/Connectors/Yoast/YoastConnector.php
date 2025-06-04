@@ -13,6 +13,36 @@ use Ryvr\Connectors\AbstractConnector;
 class YoastConnector extends AbstractConnector
 {
     /**
+     * Get the connector ID.
+     *
+     * @return string
+     */
+    public function get_id(): string
+    {
+        return 'yoast';
+    }
+
+    /**
+     * Get the connector name.
+     *
+     * @return string
+     */
+    public function get_name(): string
+    {
+        return 'Yoast SEO';
+    }
+
+    /**
+     * Get the connector description.
+     *
+     * @return string
+     */
+    public function get_description(): string
+    {
+        return 'WordPress SEO optimization and readability analysis';
+    }
+
+    /**
      * Get connector metadata.
      *
      * @return array
@@ -96,6 +126,16 @@ class YoastConnector extends AbstractConnector
                 ]
             ]
         ];
+    }
+
+    /**
+     * Get available triggers.
+     *
+     * @return array
+     */
+    public function get_triggers(): array
+    {
+        return [];
     }
 
     /**
