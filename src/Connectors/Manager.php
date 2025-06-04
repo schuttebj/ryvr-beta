@@ -161,13 +161,25 @@ class Manager
      */
     public function ajax_validate_auth(): void
     {
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: ajax_validate_auth called');
+            error_log('Ryvr: POST data: ' . print_r($_POST, true));
+        }
+        
         // Check nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'ryvr-admin-nonce')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Nonce verification failed in validate_auth');
+            }
             wp_send_json_error(['message' => __('Security check failed.', 'ryvr')]);
         }
         
         // Check permissions
         if (!current_user_can('manage_options')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Permission check failed in validate_auth');
+            }
             wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'ryvr')]);
         }
         
@@ -175,22 +187,44 @@ class Manager
         $connector_id = sanitize_text_field($_POST['connector_id'] ?? '');
         $credentials = isset($_POST['credentials']) ? json_decode(stripslashes($_POST['credentials']), true) : [];
         
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: Validating credentials for connector: ' . $connector_id);
+            error_log('Ryvr: Credentials keys: ' . print_r(array_keys($credentials), true));
+        }
+        
         if (empty($connector_id) || !is_array($credentials)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Invalid parameters in validate_auth - connector_id: ' . $connector_id . ', credentials type: ' . gettype($credentials));
+            }
             wp_send_json_error(['message' => __('Invalid request parameters.', 'ryvr')]);
         }
         
         $connector = $this->get_connector($connector_id);
         
         if (!$connector) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Connector not found in validate_auth: ' . $connector_id);
+            }
             wp_send_json_error(['message' => __('Connector not found.', 'ryvr')]);
         }
         
         // Validate credentials
-        $is_valid = $connector->validate_auth($credentials);
-        
-        if ($is_valid) {
-            wp_send_json_success(['message' => __('Authentication successful.', 'ryvr')]);
-        } else {
+        try {
+            $is_valid = $connector->validate_auth($credentials);
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Validation result for ' . $connector_id . ': ' . ($is_valid ? 'SUCCESS' : 'FAILED'));
+            }
+            
+            if ($is_valid) {
+                wp_send_json_success(['message' => __('Authentication successful.', 'ryvr')]);
+            } else {
+                wp_send_json_error(['message' => __('Authentication failed. Please check your credentials.', 'ryvr')]);
+            }
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Exception during validation: ' . $e->getMessage());
+            }
             wp_send_json_error(['message' => __('Authentication failed. Please check your credentials.', 'ryvr')]);
         }
     }
@@ -369,13 +403,25 @@ class Manager
      */
     public function ajax_get_auth_fields(): void
     {
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: ajax_get_auth_fields called');
+            error_log('Ryvr: POST data: ' . print_r($_POST, true));
+        }
+        
         // Check nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'ryvr-admin-nonce')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Nonce verification failed');
+            }
             wp_send_json_error(['message' => __('Security check failed.', 'ryvr')]);
         }
         
         // Check permissions
         if (!current_user_can('manage_options')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: User permission check failed');
+            }
             wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'ryvr')]);
         }
         
@@ -383,17 +429,28 @@ class Manager
         $connector_id = sanitize_text_field($_POST['connector_id'] ?? '');
         
         if (empty($connector_id)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Missing connector_id');
+            }
             wp_send_json_error(['message' => __('Invalid request parameters.', 'ryvr')]);
         }
         
         $connector = $this->get_connector($connector_id);
         
         if (!$connector) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Connector not found: ' . $connector_id);
+                error_log('Ryvr: Available connectors: ' . print_r(array_keys($this->connectors), true));
+            }
             wp_send_json_error(['message' => __('Connector not found.', 'ryvr')]);
         }
         
         // Get auth fields
         $fields = $connector->get_auth_fields();
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: Auth fields for ' . $connector_id . ': ' . print_r($fields, true));
+        }
         
         // Get saved credentials
         global $wpdb;
@@ -433,6 +490,10 @@ class Manager
                     }
                 }
             }
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: Sending success response with ' . count($fields) . ' fields');
         }
         
         wp_send_json_success([

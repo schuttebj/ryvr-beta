@@ -13,6 +13,15 @@ if (!$ryvr_connector_manager) {
 
 $manager = $ryvr_connector_manager;
 $connectors = $manager->get_connectors();
+
+// Debug output for troubleshooting
+if (defined('WP_DEBUG') && WP_DEBUG) {
+    error_log('Ryvr: Connectors page loaded');
+    error_log('Ryvr: Number of connectors: ' . count($connectors));
+    foreach ($connectors as $connector) {
+        error_log('Ryvr: Connector loaded: ' . $connector->get_id() . ' - ' . $connector->get_name());
+    }
+}
 ?>
 
 <div class="ryvr-admin-wrap">
@@ -110,7 +119,7 @@ jQuery(document).ready(function($) {
     
     // Close modal
     $('.ryvr-modal-close').on('click', function() {
-        $('#ryvr-connector-modal').hide();
+        $('#ryvr-connector-modal').removeClass('show').hide();
     });
     
     // Save auth credentials
@@ -131,7 +140,7 @@ jQuery(document).ready(function($) {
     // Close modal when clicking outside
     $(window).on('click', function(e) {
         if ($(e.target).hasClass('ryvr-modal')) {
-            $('#ryvr-connector-modal').hide();
+            $('#ryvr-connector-modal').removeClass('show').hide();
         }
     });
     
@@ -179,7 +188,7 @@ jQuery(document).ready(function($) {
             }
         });
         
-        $('#ryvr-connector-modal').show();
+        $('#ryvr-connector-modal').addClass('show').show();
     }
     
     // Function to load auth fields
