@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace Ryvr\Engine;
 
-use Ryvr\Workflows\Manager as WorkflowManager;
-
 /**
  * Workflow execution runner.
  * Handles scheduled and triggered workflow execution.
@@ -14,36 +12,12 @@ use Ryvr\Workflows\Manager as WorkflowManager;
 class Runner
 {
     /**
-     * Workflow manager instance.
-     *
-     * @var \Ryvr\Workflows\Manager
-     */
-    protected $workflow_manager;
-    
-    /**
-     * Runner constructor.
-     *
-     * @param \Ryvr\Workflows\Manager|null $workflow_manager Workflow manager instance.
-     *
-     * @since 1.0.0
-     */
-    public function __construct(\Ryvr\Workflows\Manager $workflow_manager = null)
-    {
-        $this->workflow_manager = $workflow_manager ?? new WorkflowManager();
-    }
-    
-    /**
      * Run a workflow.
-     *
-     * This method is called by the WordPress cron system or directly when 
-     * a workflow is triggered manually.
      *
      * @param string $workflow_id  Workflow ID.
      * @param array  $input        Input data for the workflow.
      *
      * @return array Workflow execution result.
-     *
-     * @throws \Exception If execution fails.
      *
      * @since 1.0.0
      */
@@ -140,7 +114,7 @@ class Runner
             throw new \Exception("Connector not found: {$connector_id}");
         }
         
-        // Get authentication (placeholder - would need to get from settings/user)
+        // Get authentication
         $auth = $this->get_auth_for_connector($connector_id);
         
         // Execute action
@@ -173,15 +147,40 @@ class Runner
     
     /**
      * Get authentication for connector.
-     * TODO: Implement proper auth retrieval from settings/user
      *
      * @param string $connector_id
      * @return array
      */
     private function get_auth_for_connector(string $connector_id): array
     {
-        // Placeholder - would need to implement proper auth retrieval
-        return [];
+        // Get stored credentials for the current user
+        global $wpdb;
+        
+        $user_id = get_current_user_id();
+        if (!$user_id) {
+            return [];
+        }
+        
+        $auth_data = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT auth_meta FROM {$wpdb->prefix}ryvr_api_keys WHERE connector_slug = %s AND user_id = %d",
+                $connector_id,
+                $user_id
+            )
+        );
+        
+        if (!$auth_data) {
+            return [];
+        }
+        
+        $credentials = json_decode($auth_data, true);
+        if (!is_array($credentials)) {
+            return [];
+        }
+        
+        // Decrypt credentials if needed
+        // TODO: Implement proper decryption
+        return $credentials;
     }
     
     /**
@@ -190,13 +189,12 @@ class Runner
      * @param string $workflow_id   Workflow ID.
      * @param array  $input         Input data for the workflow.
      * @param int    $timestamp     Timestamp to run the workflow.
-     * @param string $unique_id     Optional unique ID for the event.
      *
      * @return bool Whether the workflow was scheduled successfully.
      *
      * @since 1.0.0
      */
-    public function schedule(string $workflow_id, array $input = [], int $timestamp = 0, string $unique_id = ''): bool
+    public function schedule(string $workflow_id, array $input = [], int $timestamp = 0): bool
     {
         // If no timestamp is provided, run immediately
         if ($timestamp <= 0) {
@@ -205,32 +203,19 @@ class Runner
         
         // Check if Action Scheduler is available
         if (function_exists('as_schedule_single_action')) {
-            // Generate a unique ID if none provided
-            if (empty($unique_id)) {
-                $unique_id = uniqid('ryvr_workflow_', true);
-            }
-            
-            // Schedule the workflow execution
             return as_schedule_single_action(
                 $timestamp,
                 'ryvr_run_workflow',
-                [
-                    'workflow_id' => $workflow_id,
-                    'input' => $input,
-                ],
-                'ryvr',
-                $unique_id
+                [$workflow_id, $input],
+                'ryvr'
             );
         }
         
-        // Fallback to WordPress cron if Action Scheduler is not available
+        // Fallback to WordPress cron
         return wp_schedule_single_event(
             $timestamp,
             'ryvr_run_workflow',
-            [
-                $workflow_id,
-                $input,
-            ]
+            [$workflow_id, $input]
         );
     }
     
