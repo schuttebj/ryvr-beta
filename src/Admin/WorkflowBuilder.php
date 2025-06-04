@@ -58,8 +58,27 @@ class WorkflowBuilder
      */
     public function enqueue_scripts(string $hook_suffix): void
     {
-        if (strpos($hook_suffix, 'ryvr-builder') === false) {
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: WorkflowBuilder enqueue_scripts called with hook: ' . $hook_suffix);
+        }
+        
+        // Check if we're on the workflow builder page
+        $is_builder_page = (
+            strpos($hook_suffix, 'ryvr-builder') !== false ||
+            strpos($hook_suffix, 'ryvr_page_ryvr-builder') !== false ||
+            (isset($_GET['page']) && $_GET['page'] === 'ryvr-builder')
+        );
+        
+        if (!$is_builder_page) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Not on workflow builder page, skipping script enqueue. Page: ' . ($_GET['page'] ?? 'none'));
+            }
             return;
+        }
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: Enqueueing workflow builder scripts and styles');
         }
 
         wp_enqueue_style(
@@ -77,10 +96,21 @@ class WorkflowBuilder
             true
         );
 
-        wp_localize_script('ryvr-workflow-builder', 'ryvrWorkflowBuilder', [
+        // Localize script with debug logging
+        $localize_data = [
             'nonce' => wp_create_nonce('ryvr_workflow_builder'),
             'ajax_url' => admin_url('admin-ajax.php'),
-        ]);
+        ];
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: Localizing script with data: ' . print_r($localize_data, true));
+        }
+
+        wp_localize_script('ryvr-workflow-builder', 'ryvrWorkflowBuilder', $localize_data);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Ryvr: wp_localize_script completed');
+        }
     }
 
     /**
@@ -297,6 +327,39 @@ class WorkflowBuilder
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
+        </script>
+        
+        <!-- Debug Script for Localization Issues -->
+        <script>
+        console.log('=== Ryvr Workflow Builder Debug ===');
+        console.log('ryvrWorkflowBuilder object:', typeof ryvrWorkflowBuilder !== 'undefined' ? ryvrWorkflowBuilder : 'UNDEFINED');
+        console.log('jQuery loaded:', typeof jQuery !== 'undefined');
+        console.log('Document ready state:', document.readyState);
+        
+        // Fallback localization if wp_localize_script failed
+        if (typeof ryvrWorkflowBuilder === 'undefined') {
+            console.warn('Creating fallback ryvrWorkflowBuilder object');
+            window.ryvrWorkflowBuilder = {
+                nonce: '<?php echo wp_create_nonce('ryvr_workflow_builder'); ?>',
+                ajax_url: '<?php echo admin_url('admin-ajax.php'); ?>'
+            };
+        }
+        
+        // Try to detect if scripts are loading
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded');
+            console.log('ryvrWorkflowBuilder after DOM load:', typeof ryvrWorkflowBuilder !== 'undefined' ? ryvrWorkflowBuilder : 'STILL UNDEFINED');
+            
+            if (typeof ryvrWorkflowBuilder === 'undefined') {
+                console.error('PROBLEM: ryvrWorkflowBuilder object not found!');
+                console.log('This means wp_localize_script failed. Check:');
+                console.log('1. Script is being enqueued');
+                console.log('2. Script handle matches wp_localize_script');
+                console.log('3. Hook priority issues');
+            } else {
+                console.log('✓ ryvrWorkflowBuilder object available:', ryvrWorkflowBuilder);
+            }
+        });
         </script>
         <?php
     }
