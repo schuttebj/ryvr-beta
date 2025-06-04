@@ -200,7 +200,7 @@ class DataForSEOConnector extends AbstractConnector
                 }
             }
             
-            // Use user_data endpoint for validation - free and provides account info
+            // Use user_data endpoint (same as successful ReqBin test) with browser User-Agent
             $response = $client->request('GET', $validation_url, [
                 'auth' => [
                     $credentials['login'],
@@ -208,7 +208,9 @@ class DataForSEOConnector extends AbstractConnector
                 ],
                 'headers' => [
                     'Content-Type' => 'application/json',
-                    'User-Agent' => 'Ryvr/1.0 WordPress Plugin',
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+                    'Accept' => '*/*',
+                    'Accept-Encoding' => 'deflate, gzip',
                 ],
                 'timeout' => 30,
             ]);
@@ -232,21 +234,28 @@ class DataForSEOConnector extends AbstractConnector
                             error_log('Ryvr: DataForSEO status_message: ' . $decoded['status_message']);
                         }
                         
-                        // Log useful account information if validation succeeds
-                        if (isset($decoded['tasks'][0]['result'])) {
-                            $result = $decoded['tasks'][0]['result'];
-                            if (isset($result['login'])) {
-                                error_log('Ryvr: DataForSEO API Login: ' . $result['login']);
+                        // Log task information if validation succeeds
+                        if (isset($decoded['tasks'][0])) {
+                            $task = $decoded['tasks'][0];
+                            if (isset($task['id'])) {
+                                error_log('Ryvr: DataForSEO Task ID: ' . $task['id']);
                             }
-                            if (isset($result['timezone'])) {
-                                error_log('Ryvr: DataForSEO Timezone: ' . $result['timezone']);
+                            if (isset($task['status_message'])) {
+                                error_log('Ryvr: DataForSEO Task Status: ' . $task['status_message']);
                             }
-                            if (isset($result['money']['balance'])) {
-                                error_log('Ryvr: DataForSEO Account Balance: $' . $result['money']['balance']);
+                            if (isset($task['cost'])) {
+                                error_log('Ryvr: DataForSEO Task Cost: $' . $task['cost']);
                             }
-                            if (isset($result['backlinks_subscription_expiry_date'])) {
-                                $expiry = $result['backlinks_subscription_expiry_date'];
-                                error_log('Ryvr: DataForSEO Backlinks Subscription: ' . ($expiry ? $expiry : 'No active subscription'));
+                            
+                            // Log user data if available
+                            if (isset($task['result']['login'])) {
+                                error_log('Ryvr: DataForSEO API Login: ' . $task['result']['login']);
+                            }
+                            if (isset($task['result']['timezone'])) {
+                                error_log('Ryvr: DataForSEO Timezone: ' . $task['result']['timezone']);
+                            }
+                            if (isset($task['result']['money']['balance'])) {
+                                error_log('Ryvr: DataForSEO Account Balance: $' . $task['result']['money']['balance']);
                             }
                         }
                     }
