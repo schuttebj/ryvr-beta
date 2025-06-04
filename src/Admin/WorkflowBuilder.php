@@ -207,27 +207,22 @@ class WorkflowBuilder
         }
 
         try {
-            // Load connector manager
-            require_once RYVR_PLUGIN_DIR . 'src/Connectors/Manager.php';
-            $manager = new \Ryvr\Connectors\Manager();
+            // Use global connector manager
+            global $ryvr_connector_manager;
             
-            $connectors = [];
-            
-            // Get OpenAI connector
-            if (class_exists('\Ryvr\Connectors\OpenAI\OpenAIConnector')) {
-                $openai = new \Ryvr\Connectors\OpenAI\OpenAIConnector();
-                $connectors['openai'] = [
-                    'metadata' => $openai->get_metadata(),
-                    'actions' => $openai->get_actions()
-                ];
+            if (!$ryvr_connector_manager) {
+                // Fallback: create manager if not available
+                require_once RYVR_PLUGIN_DIR . 'src/Connectors/Manager.php';
+                $ryvr_connector_manager = new \Ryvr\Connectors\Manager();
             }
             
-            // Get DataForSEO connector
-            if (class_exists('\Ryvr\Connectors\DataForSEO\DataForSEOConnector')) {
-                $dataforseo = new \Ryvr\Connectors\DataForSEO\DataForSEOConnector();
-                $connectors['dataforseo'] = [
-                    'metadata' => $dataforseo->get_metadata(),
-                    'actions' => $dataforseo->get_actions()
+            $connectors = [];
+            $available_connectors = $ryvr_connector_manager->get_connectors();
+            
+            foreach ($available_connectors as $connector_id => $connector) {
+                $connectors[$connector_id] = [
+                    'metadata' => $connector->get_metadata(),
+                    'actions' => $connector->get_actions()
                 ];
             }
 

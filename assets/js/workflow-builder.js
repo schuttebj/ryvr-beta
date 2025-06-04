@@ -79,6 +79,10 @@ class RyvrWorkflowBuilder {
     
     async loadConnectors() {
         try {
+            console.log('Workflow Builder: Loading connectors...');
+            console.log('AJAX URL:', '/wp-admin/admin-ajax.php');
+            console.log('Nonce:', ryvrWorkflowBuilder.nonce);
+            
             const response = await fetch('/wp-admin/admin-ajax.php', {
                 method: 'POST',
                 headers: {
@@ -90,10 +94,16 @@ class RyvrWorkflowBuilder {
                 })
             });
             
+            console.log('Response status:', response.status);
             const data = await response.json();
+            console.log('Response data:', data);
+            
             if (data.success) {
                 this.connectors = data.data;
+                console.log('Loaded connectors:', this.connectors);
                 this.renderConnectorsList();
+            } else {
+                console.error('Failed to load connectors:', data.data || data);
             }
         } catch (error) {
             console.error('Failed to load connectors:', error);
