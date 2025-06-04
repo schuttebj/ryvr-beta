@@ -143,14 +143,28 @@ class RyvrServiceProvider
         }
         
         // Load individual connectors
-        $openai_file = RYVR_PLUGIN_DIR . 'src/Connectors/OpenAI/OpenAIConnector.php';
-        if (file_exists($openai_file)) {
-            require_once $openai_file;
-        }
+        $connectors = [
+            // Existing connectors
+            'src/Connectors/OpenAI/OpenAIConnector.php',
+            'src/Connectors/DataForSEO/DataForSEOConnector.php',
+            
+            // New placeholder connectors
+            'src/Connectors/GoogleAds/GoogleAdsConnector.php',
+            'src/Connectors/GoogleAnalytics/GoogleAnalyticsConnector.php',
+            'src/Connectors/Ahrefs/AhrefsConnector.php',
+            'src/Connectors/LinkedIn/LinkedInConnector.php',
+            'src/Connectors/Meta/MetaConnector.php',
+            'src/Connectors/RankMath/RankMathConnector.php',
+            'src/Connectors/Yoast/YoastConnector.php',
+            'src/Connectors/WordPress/WordPressConnector.php',
+            'src/Connectors/WooCommerce/WooCommerceConnector.php'
+        ];
         
-        $dataforseo_file = RYVR_PLUGIN_DIR . 'src/Connectors/DataForSEO/DataForSEOConnector.php';
-        if (file_exists($dataforseo_file)) {
-            require_once $dataforseo_file;
+        foreach ($connectors as $connector_file) {
+            $full_path = RYVR_PLUGIN_DIR . $connector_file;
+            if (file_exists($full_path)) {
+                require_once $full_path;
+            }
         }
         
         // Register connector manager

@@ -457,30 +457,27 @@ class WorkflowBuilder
             wp_die(__('You do not have permission to access this endpoint.', 'ryvr'));
         }
 
+        // Always return default models for now until OpenAI connector is properly configured
+        $default_models = [
+            ['id' => 'gpt-4o', 'name' => 'GPT-4o', 'category' => 'chat'],
+            ['id' => 'gpt-4o-mini', 'name' => 'GPT-4o Mini', 'category' => 'chat'],
+            ['id' => 'gpt-4-turbo', 'name' => 'GPT-4 Turbo', 'category' => 'chat'],
+            ['id' => 'gpt-3.5-turbo', 'name' => 'GPT-3.5 Turbo', 'category' => 'chat'],
+            ['id' => 'gpt-4', 'name' => 'GPT-4', 'category' => 'chat'],
+            ['id' => 'text-davinci-003', 'name' => 'Text Davinci 003', 'category' => 'completion'],
+        ];
+        
         try {
-            // Check if OpenAI connector exists and has auth configured
-            if (!class_exists('\Ryvr\Connectors\OpenAI\OpenAIConnector')) {
-                wp_send_json_error('OpenAI connector not available');
-                return;
-            }
-
-            $openai = new \Ryvr\Connectors\OpenAI\OpenAIConnector();
-            
-            // Try to get models if auth is configured
-            // For now, return default models
-            $models = $openai->get_available_models();
-
-            wp_send_json_success($models);
+            // Future: Try to get live models if OpenAI is configured
+            // For now, just return the default models
+            wp_send_json_success($default_models);
 
         } catch (\Exception $e) {
-            // Fallback to default models
-            $default_models = [
-                ['id' => 'gpt-4o', 'name' => 'GPT-4o', 'category' => 'chat'],
-                ['id' => 'gpt-4o-mini', 'name' => 'GPT-4o Mini', 'category' => 'chat'],
-                ['id' => 'gpt-4-turbo', 'name' => 'GPT-4 Turbo', 'category' => 'chat'],
-                ['id' => 'gpt-3.5-turbo', 'name' => 'GPT-3.5 Turbo', 'category' => 'chat'],
-            ];
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Error loading OpenAI models: ' . $e->getMessage());
+            }
             
+            // Always fallback to default models
             wp_send_json_success($default_models);
         }
     }
@@ -514,18 +511,104 @@ class WorkflowBuilder
                 return;
             }
             
+            // Convert old format to new workflow builder format
+            $converted_workflows = [];
+            foreach ($sample_workflows as $key => $workflow) {
+                $converted_workflows[$key] = $this->convertWorkflowFormat($workflow);
+            }
+            
             // If a specific workflow key is requested, return just that workflow
             $workflow_key = sanitize_text_field($_POST['workflow_key'] ?? '');
-            if (!empty($workflow_key) && isset($sample_workflows[$workflow_key])) {
-                wp_send_json_success([$workflow_key => $sample_workflows[$workflow_key]]);
+            if (!empty($workflow_key) && isset($converted_workflows[$workflow_key])) {
+                wp_send_json_success([$workflow_key => $converted_workflows[$workflow_key]]);
                 return;
             }
             
-            wp_send_json_success($sample_workflows);
+            wp_send_json_success($converted_workflows);
 
         } catch (\Exception $e) {
             wp_send_json_error('Failed to load sample workflows: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Convert old workflow format to new node-based format.
+     *
+     * @param array $workflow
+     * @return array
+     */
+    private function convertWorkflowFormat(array $workflow): array
+    {
+        $nodes = [];
+        $connections = [];
+        
+        if (isset($workflow['steps'])) {
+            $x = 100;
+            $y = 100;
+            
+            foreach ($workflow['steps'] as $step) {
+                $nodeId = 'node-' . $step['id'] . '-' . time() . '-' . rand(1000, 9999);
+                
+                $nodes[] = [
+                    'id' => $nodeId,
+                    'connectorId' => $step['connector'],
+                    'actionId' => $step['action'],
+                    'x' => $x,
+                    'y' => $y,
+                    'parameters' => $step['params'] ?? [],
+                    'originalStepId' => $step['id'] // Keep reference for edge mapping
+                ];
+                
+                $x += 300; // Space nodes horizontally
+                if ($x > 800) {
+                    $x = 100;
+                    $y += 200;
+                }
+            }
+            
+            // Convert edges to connections
+            if (isset($workflow['edges'])) {
+                foreach ($workflow['edges'] as $edge) {
+                    $sourceStepId = $edge[0];
+                    $targetStepId = $edge[1];
+                    
+                    // Find the corresponding node IDs
+                    $sourceNodeId = null;
+                    $targetNodeId = null;
+                    
+                    foreach ($nodes as $node) {
+                        if ($node['originalStepId'] === $sourceStepId) {
+                            $sourceNodeId = $node['id'];
+                        }
+                        if ($node['originalStepId'] === $targetStepId) {
+                            $targetNodeId = $node['id'];
+                        }
+                    }
+                    
+                    if ($sourceNodeId && $targetNodeId) {
+                        $connections[] = [
+                            'id' => "connection-{$sourceNodeId}-{$targetNodeId}",
+                            'source' => $sourceNodeId,
+                            'target' => $targetNodeId,
+                            'mapping' => []
+                        ];
+                    }
+                }
+            }
+            
+            // Remove the originalStepId from nodes
+            foreach ($nodes as &$node) {
+                unset($node['originalStepId']);
+            }
+        }
+        
+        return [
+            'id' => $workflow['id'],
+            'name' => $workflow['name'],
+            'description' => $workflow['description'],
+            'nodes' => $nodes,
+            'connections' => $connections
+        ];
     }
 
     /**

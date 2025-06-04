@@ -154,6 +154,42 @@
     background: #4285f4;
 }
 
+.ryvr-task-card[data-connector="google_ads"] .task-icon {
+    background: #4285f4;
+}
+
+.ryvr-task-card[data-connector="google_analytics"] .task-icon {
+    background: #ff6d00;
+}
+
+.ryvr-task-card[data-connector="ahrefs"] .task-icon {
+    background: #ff6900;
+}
+
+.ryvr-task-card[data-connector="linkedin"] .task-icon {
+    background: #0077b5;
+}
+
+.ryvr-task-card[data-connector="meta"] .task-icon {
+    background: #1877f2;
+}
+
+.ryvr-task-card[data-connector="rankmath"] .task-icon {
+    background: #e31e24;
+}
+
+.ryvr-task-card[data-connector="yoast"] .task-icon {
+    background: #a4286a;
+}
+
+.ryvr-task-card[data-connector="wordpress"] .task-icon {
+    background: #21759b;
+}
+
+.ryvr-task-card[data-connector="woocommerce"] .task-icon {
+    background: #96588a;
+}
+
 /* Canvas Area */
 .ryvr-canvas {
     background: var(--ryvr-white);
@@ -246,25 +282,154 @@
 
 /* Connection Handles */
 .ryvr-handle {
+    position: absolute;
     width: 12px;
     height: 12px;
-    background: var(--ryvr-accent);
-    border: 2px solid var(--ryvr-white);
     border-radius: 50%;
-    position: absolute;
     cursor: crosshair;
+    z-index: 10;
+    transition: all 0.2s ease;
 }
 
 .ryvr-handle.source {
     right: -6px;
     top: 50%;
     transform: translateY(-50%);
+    background: var(--ryvr-accent);
 }
 
 .ryvr-handle.target {
     left: -6px;
     top: 50%;
     transform: translateY(-50%);
+    background: var(--ryvr-secondary);
+}
+
+.ryvr-handle .handle-dot {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: currentColor;
+    border: 2px solid var(--ryvr-white);
+    box-sizing: border-box;
+}
+
+.ryvr-handle:hover {
+    transform: translateY(-50%) scale(1.2);
+}
+
+.ryvr-handle.connection-target {
+    background: var(--ryvr-success);
+    transform: translateY(-50%) scale(1.3);
+}
+
+/* Connection Lines */
+.connection-line {
+    cursor: pointer;
+    transition: stroke-width 0.2s ease;
+}
+
+.connection-line:hover {
+    stroke-width: 3;
+}
+
+.connection-line.selected {
+    stroke: var(--ryvr-primary);
+    stroke-width: 3;
+}
+
+.temp-connection {
+    stroke-dasharray: 5,5;
+    animation: dash 1s linear infinite;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: -10;
+    }
+}
+
+/* Connecting state */
+.ryvr-workflow-builder.connecting {
+    cursor: crosshair;
+}
+
+.ryvr-workflow-builder.connecting .ryvr-node {
+    opacity: 0.7;
+}
+
+.ryvr-workflow-builder.connecting .ryvr-handle.target {
+    opacity: 1;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: translateY(-50%) scale(1);
+    }
+    50% {
+        transform: translateY(-50%) scale(1.3);
+    }
+}
+
+/* Connection Inspector */
+.connection-info {
+    padding: 12px;
+    background: var(--ryvr-background);
+    border-radius: 6px;
+    margin-bottom: 16px;
+}
+
+.data-mapping {
+    border-top: 1px solid var(--ryvr-border);
+    padding-top: 16px;
+}
+
+.mapping-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.mapping-controls .ryvr-btn {
+    flex: 1;
+}
+
+/* Enhanced Model Selection */
+.ryvr-form-select {
+    padding: 8px 12px;
+    border: 1px solid var(--ryvr-border);
+    border-radius: 4px;
+    background: var(--ryvr-white);
+    font-size: 14px;
+    width: 100%;
+    transition: border-color 0.2s ease;
+}
+
+.ryvr-form-select:focus {
+    outline: none;
+    border-color: var(--ryvr-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Better Drag Handles */
+.ryvr-node {
+    position: relative;
+}
+
+.ryvr-node:hover .ryvr-handle {
+    opacity: 1;
+    visibility: visible;
+}
+
+.ryvr-handle {
+    opacity: 0.6;
+    visibility: hidden;
+}
+
+.ryvr-node.selected .ryvr-handle {
+    opacity: 1;
+    visibility: visible;
 }
 
 /* Inspector Panel */

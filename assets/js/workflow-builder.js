@@ -13,6 +13,11 @@ class RyvrWorkflowBuilder {
         this.connectors = {};
         this.availableModels = {};
         
+        // Connection state
+        this.isConnecting = false;
+        this.connectionStart = null;
+        this.tempConnection = null;
+        
         this.init();
     }
     
@@ -276,14 +281,21 @@ class RyvrWorkflowBuilder {
                 <div class="node-status"></div>
             </div>
             <div class="node-description">${action.description}</div>
-            <div class="ryvr-handle source"></div>
-            <div class="ryvr-handle target"></div>
+            <div class="ryvr-handle source" data-handle-type="source" data-node-id="${nodeData.id}">
+                <div class="handle-dot"></div>
+            </div>
+            <div class="ryvr-handle target" data-handle-type="target" data-node-id="${nodeData.id}">
+                <div class="handle-dot"></div>
+            </div>
         `;
         
         nodeElement.addEventListener('click', (e) => {
             e.stopPropagation();
             this.selectNode(nodeData.id);
         });
+        
+        // Handle connection events
+        this.setupConnectionHandles(nodeElement);
         
         // Make node draggable
         this.makeNodeDraggable(nodeElement, nodeData);
@@ -320,6 +332,9 @@ class RyvrWorkflowBuilder {
             
             element.style.left = `${nodeData.x}px`;
             element.style.top = `${nodeData.y}px`;
+            
+            // Update connections when node moves
+            this.updateNodeConnections(nodeData.id);
         };
         
         const handleMouseUp = () => {
@@ -328,6 +343,22 @@ class RyvrWorkflowBuilder {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
+    }
+    
+    updateNodeConnections(nodeId) {
+        // Update all connections involving this node
+        this.connections.forEach((connectionData, connectionId) => {
+            if (connectionData.source === nodeId || connectionData.target === nodeId) {
+                const sourceElement = this.nodesContainer.querySelector(`[data-node-id="${connectionData.source}"]`);
+                const targetElement = this.nodesContainer.querySelector(`[data-node-id="${connectionData.target}"]`);
+                
+                if (sourceElement && targetElement) {
+                    const sourceHandle = sourceElement.querySelector('.ryvr-handle.source');
+                    const targetHandle = targetElement.querySelector('.ryvr-handle.target');
+                    this.updateConnectionLine(connectionId, sourceHandle, targetHandle);
+                }
+            }
+        });
     }
     
     handleCanvasClick(e) {
@@ -572,17 +603,40 @@ class RyvrWorkflowBuilder {
             this.nodes.clear();
             this.connections.clear();
             this.nodesContainer.innerHTML = '';
+            this.connectionsSpg.innerHTML = `
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                            refX="10" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" 
+                                 fill="var(--ryvr-accent)" />
+                    </marker>
+                </defs>
+            `;
             
             // Load nodes
-            workflow.nodes.forEach(nodeData => {
-                this.nodes.set(nodeData.id, nodeData);
-                this.renderNode(nodeData);
-            });
+            if (workflow.nodes) {
+                workflow.nodes.forEach(nodeData => {
+                    this.nodes.set(nodeData.id, nodeData);
+                    this.renderNode(nodeData);
+                });
+            }
             
-            // TODO: Load connections
+            // Load connections
+            if (workflow.connections) {
+                workflow.connections.forEach(connectionData => {
+                    this.connections.set(connectionData.id, connectionData);
+                    // Delay rendering connections to ensure nodes are rendered first
+                    setTimeout(() => {
+                        this.renderConnection(connectionData);
+                    }, 100);
+                });
+            }
+            
+            console.log('Workflow loaded successfully:', workflow);
             
         } catch (error) {
             console.error('Failed to load workflow:', error);
+            alert('Failed to load workflow: ' + error.message);
         }
     }
     
@@ -596,6 +650,267 @@ class RyvrWorkflowBuilder {
                 <button class="ryvr-btn ryvr-btn-secondary" onclick="location.reload()">Retry</button>
             </div>
         `;
+    }
+    
+    setupConnectionHandles(nodeElement) {
+        const handles = nodeElement.querySelectorAll('.ryvr-handle');
+        
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+                this.startConnection(e, handle);
+            });
+            
+            handle.addEventListener('mouseenter', (e) => {
+                if (this.isConnecting && this.connectionStart) {
+                    handle.classList.add('connection-target');
+                }
+            });
+            
+            handle.addEventListener('mouseleave', (e) => {
+                handle.classList.remove('connection-target');
+            });
+            
+            handle.addEventListener('mouseup', (e) => {
+                if (this.isConnecting) {
+                    this.completeConnection(e, handle);
+                }
+            });
+        });
+    }
+    
+    startConnection(e, handle) {
+        const handleType = handle.getAttribute('data-handle-type');
+        const nodeId = handle.getAttribute('data-node-id');
+        
+        // Only start connections from source handles
+        if (handleType !== 'source') return;
+        
+        this.isConnecting = true;
+        this.connectionStart = {
+            nodeId: nodeId,
+            handle: handle,
+            type: handleType
+        };
+        
+        // Add temporary connection line that follows mouse
+        document.addEventListener('mousemove', this.handleConnectionDrag.bind(this));
+        document.addEventListener('mouseup', this.cancelConnection.bind(this));
+        
+        this.container.classList.add('connecting');
+    }
+    
+    handleConnectionDrag(e) {
+        if (!this.isConnecting || !this.connectionStart) return;
+        
+        // Remove existing temp connection
+        if (this.tempConnection) {
+            this.tempConnection.remove();
+        }
+        
+        // Create temporary line following mouse
+        const startHandle = this.connectionStart.handle;
+        const startRect = startHandle.getBoundingClientRect();
+        const canvasRect = this.canvasElement.getBoundingClientRect();
+        
+        const startX = startRect.left + startRect.width / 2 - canvasRect.left;
+        const startY = startRect.top + startRect.height / 2 - canvasRect.top;
+        const endX = e.clientX - canvasRect.left;
+        const endY = e.clientY - canvasRect.top;
+        
+        this.tempConnection = this.createConnectionLine(startX, startY, endX, endY, true);
+        this.connectionsSpg.appendChild(this.tempConnection);
+    }
+    
+    completeConnection(e, targetHandle) {
+        if (!this.isConnecting || !this.connectionStart) return;
+        
+        const targetType = targetHandle.getAttribute('data-handle-type');
+        const targetNodeId = targetHandle.getAttribute('data-node-id');
+        
+        // Only complete connections to target handles
+        if (targetType !== 'target') {
+            this.cancelConnection();
+            return;
+        }
+        
+        // Don't connect to same node
+        if (this.connectionStart.nodeId === targetNodeId) {
+            this.cancelConnection();
+            return;
+        }
+        
+        // Create the connection
+        this.createConnection(this.connectionStart.nodeId, targetNodeId);
+        this.cancelConnection();
+    }
+    
+    cancelConnection() {
+        this.isConnecting = false;
+        this.connectionStart = null;
+        
+        if (this.tempConnection) {
+            this.tempConnection.remove();
+            this.tempConnection = null;
+        }
+        
+        this.container.classList.remove('connecting');
+        document.removeEventListener('mousemove', this.handleConnectionDrag.bind(this));
+        document.removeEventListener('mouseup', this.cancelConnection.bind(this));
+        
+        // Remove connection target highlights
+        this.container.querySelectorAll('.connection-target').forEach(el => {
+            el.classList.remove('connection-target');
+        });
+    }
+    
+    createConnection(sourceNodeId, targetNodeId) {
+        const connectionId = `connection-${sourceNodeId}-${targetNodeId}`;
+        
+        // Check if connection already exists
+        if (this.connections.has(connectionId)) {
+            return;
+        }
+        
+        const connectionData = {
+            id: connectionId,
+            source: sourceNodeId,
+            target: targetNodeId,
+            mapping: {} // For data mapping between nodes
+        };
+        
+        this.connections.set(connectionId, connectionData);
+        this.renderConnection(connectionData);
+        
+        console.log('Connection created:', connectionData);
+    }
+    
+    renderConnection(connectionData) {
+        const sourceElement = this.nodesContainer.querySelector(`[data-node-id="${connectionData.source}"]`);
+        const targetElement = this.nodesContainer.querySelector(`[data-node-id="${connectionData.target}"]`);
+        
+        if (!sourceElement || !targetElement) return;
+        
+        const sourceHandle = sourceElement.querySelector('.ryvr-handle.source');
+        const targetHandle = targetElement.querySelector('.ryvr-handle.target');
+        
+        this.updateConnectionLine(connectionData.id, sourceHandle, targetHandle);
+    }
+    
+    updateConnectionLine(connectionId, sourceHandle, targetHandle) {
+        // Remove existing line
+        const existingLine = this.connectionsSpg.querySelector(`[data-connection-id="${connectionId}"]`);
+        if (existingLine) {
+            existingLine.remove();
+        }
+        
+        const sourceRect = sourceHandle.getBoundingClientRect();
+        const targetRect = targetHandle.getBoundingClientRect();
+        const canvasRect = this.canvasElement.getBoundingClientRect();
+        
+        const startX = sourceRect.left + sourceRect.width / 2 - canvasRect.left;
+        const startY = sourceRect.top + sourceRect.height / 2 - canvasRect.top;
+        const endX = targetRect.left + targetRect.width / 2 - canvasRect.left;
+        const endY = targetRect.top + targetRect.height / 2 - canvasRect.top;
+        
+        const line = this.createConnectionLine(startX, startY, endX, endY, false, connectionId);
+        this.connectionsSpg.appendChild(line);
+    }
+    
+    createConnectionLine(startX, startY, endX, endY, isTemp = false, connectionId = null) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        
+        // Create curved path
+        const controlX1 = startX + (endX - startX) * 0.5;
+        const controlY1 = startY;
+        const controlX2 = startX + (endX - startX) * 0.5;
+        const controlY2 = endY;
+        
+        const pathData = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
+        
+        line.setAttribute('d', pathData);
+        line.setAttribute('stroke', isTemp ? '#ccc' : 'var(--ryvr-accent)');
+        line.setAttribute('stroke-width', '2');
+        line.setAttribute('fill', 'none');
+        line.setAttribute('marker-end', 'url(#arrowhead)');
+        
+        if (connectionId) {
+            line.setAttribute('data-connection-id', connectionId);
+            line.classList.add('connection-line');
+            
+            // Add click handler for connection
+            line.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.selectConnection(connectionId);
+            });
+        } else if (isTemp) {
+            line.classList.add('temp-connection');
+        }
+        
+        return line;
+    }
+    
+    selectConnection(connectionId) {
+        // Remove existing selection
+        this.connectionsSpg.querySelectorAll('.connection-line').forEach(line => {
+            line.classList.remove('selected');
+        });
+        
+        // Select the clicked connection
+        const connectionLine = this.connectionsSpg.querySelector(`[data-connection-id="${connectionId}"]`);
+        if (connectionLine) {
+            connectionLine.classList.add('selected');
+        }
+        
+        // Show connection inspector
+        this.showConnectionInspector(connectionId);
+    }
+    
+    showConnectionInspector(connectionId) {
+        const connectionData = this.connections.get(connectionId);
+        const sourceNode = this.nodes.get(connectionData.source);
+        const targetNode = this.nodes.get(connectionData.target);
+        
+        this.inspectorContent.innerHTML = `
+            <h3>Connection</h3>
+            <div class="connection-info">
+                <p><strong>From:</strong> ${sourceNode.actionId}</p>
+                <p><strong>To:</strong> ${targetNode.actionId}</p>
+            </div>
+            <div class="data-mapping">
+                <h4>Data Mapping</h4>
+                <p>Configure how data flows between these tasks:</p>
+                <div class="mapping-controls">
+                    <button class="ryvr-btn ryvr-btn-secondary" onclick="ryvrWorkflowBuilderInstance.openMappingModal('${connectionId}')">
+                        Configure Mapping
+                    </button>
+                    <button class="ryvr-btn ryvr-btn-danger" onclick="ryvrWorkflowBuilderInstance.deleteConnection('${connectionId}')">
+                        Delete Connection
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    deleteConnection(connectionId) {
+        if (confirm('Delete this connection?')) {
+            // Remove from data
+            this.connections.delete(connectionId);
+            
+            // Remove visual line
+            const connectionLine = this.connectionsSpg.querySelector(`[data-connection-id="${connectionId}"]`);
+            if (connectionLine) {
+                connectionLine.remove();
+            }
+            
+            // Clear inspector
+            this.showEmptyInspector();
+        }
+    }
+    
+    openMappingModal(connectionId) {
+        // TODO: Implement data mapping modal
+        alert('Data mapping configuration coming soon!');
     }
 }
 
@@ -618,6 +933,18 @@ window.ryvrWorkflowBuilder = {
     addSchemaProperty() {
         if (ryvrWorkflowBuilderInstance) {
             ryvrWorkflowBuilderInstance.addSchemaProperty();
+        }
+    },
+    
+    deleteConnection(connectionId) {
+        if (ryvrWorkflowBuilderInstance) {
+            ryvrWorkflowBuilderInstance.deleteConnection(connectionId);
+        }
+    },
+    
+    openMappingModal(connectionId) {
+        if (ryvrWorkflowBuilderInstance) {
+            ryvrWorkflowBuilderInstance.openMappingModal(connectionId);
         }
     }
 };

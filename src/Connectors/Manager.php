@@ -43,6 +43,17 @@ class Manager
         // Load built-in connectors
         $this->load_connector('OpenAI', 'OpenAIConnector');
         $this->load_connector('DataForSEO', 'DataForSEOConnector');
+        
+        // Load placeholder connectors
+        $this->load_connector('GoogleAds', 'GoogleAdsConnector');
+        $this->load_connector('GoogleAnalytics', 'GoogleAnalyticsConnector');
+        $this->load_connector('Ahrefs', 'AhrefsConnector');
+        $this->load_connector('LinkedIn', 'LinkedInConnector');
+        $this->load_connector('Meta', 'MetaConnector');
+        $this->load_connector('RankMath', 'RankMathConnector');
+        $this->load_connector('Yoast', 'YoastConnector');
+        $this->load_connector('WordPress', 'WordPressConnector');
+        $this->load_connector('WooCommerce', 'WooCommerceConnector');
     }
     
     /**
