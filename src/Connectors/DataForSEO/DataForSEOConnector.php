@@ -180,13 +180,13 @@ class DataForSEOConnector extends AbstractConnector
         try {
             $client = $this->getClient();
             $api_url = $this->getApiUrl($credentials);
-            $full_url = $api_url . '/appendix/locations';
+            $validation_url = $api_url . '/appendix/user_data';
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 try {
                     error_log('');
                     error_log('--- Making API Request ---');
-                    error_log('Ryvr: DataForSEO making request to: ' . $full_url);
+                    error_log('Ryvr: DataForSEO making request to: ' . $validation_url);
                     error_log('Ryvr: DataForSEO login: "' . $credentials['login'] . '"');
                     error_log('Ryvr: DataForSEO password: [' . strlen($credentials['password']) . ' chars] ' . substr($credentials['password'], 0, 3) . '...');
                     error_log('Ryvr: DataForSEO use_sandbox: ' . (!empty($credentials['use_sandbox']) ? 'true' : 'false'));
@@ -200,8 +200,8 @@ class DataForSEOConnector extends AbstractConnector
                 }
             }
             
-            // Use a simpler endpoint for validation - check available locations
-            $response = $client->request('GET', $full_url, [
+            // Use user_data endpoint for validation - free and provides account info
+            $response = $client->request('GET', $validation_url, [
                 'auth' => [
                     $credentials['login'],
                     $credentials['password'],
@@ -230,6 +230,24 @@ class DataForSEOConnector extends AbstractConnector
                         error_log('Ryvr: DataForSEO decoded response keys: ' . print_r(array_keys($decoded), true));
                         if (isset($decoded['status_message'])) {
                             error_log('Ryvr: DataForSEO status_message: ' . $decoded['status_message']);
+                        }
+                        
+                        // Log useful account information if validation succeeds
+                        if (isset($decoded['tasks'][0]['result'])) {
+                            $result = $decoded['tasks'][0]['result'];
+                            if (isset($result['login'])) {
+                                error_log('Ryvr: DataForSEO API Login: ' . $result['login']);
+                            }
+                            if (isset($result['timezone'])) {
+                                error_log('Ryvr: DataForSEO Timezone: ' . $result['timezone']);
+                            }
+                            if (isset($result['money']['balance'])) {
+                                error_log('Ryvr: DataForSEO Account Balance: $' . $result['money']['balance']);
+                            }
+                            if (isset($result['backlinks_subscription_expiry_date'])) {
+                                $expiry = $result['backlinks_subscription_expiry_date'];
+                                error_log('Ryvr: DataForSEO Backlinks Subscription: ' . ($expiry ? $expiry : 'No active subscription'));
+                            }
                         }
                     }
                 } catch (\Exception $e) {
