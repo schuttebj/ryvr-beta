@@ -178,7 +178,6 @@ class DataForSEOConnector extends AbstractConnector
         }
         
         try {
-            $client = $this->getClient();
             $api_url = $this->getApiUrl($credentials);
             $validation_url = $api_url . '/appendix/user_data';
             
@@ -200,37 +199,49 @@ class DataForSEOConnector extends AbstractConnector
                 }
             }
             
-            // Use user_data endpoint (same as successful ReqBin test) with browser User-Agent
-            $request_headers = [
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-                'Accept' => '*/*',
-                'Accept-Encoding' => 'deflate, gzip',
+            // Use direct cURL to exactly match ReqBin request
+            $basic_auth = base64_encode($credentials['login'] . ':' . $credentials['password']);
+            
+            $curl_headers = [
+                'Accept: */*',
+                'Accept-Encoding: deflate, gzip',
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+                'Authorization: Basic ' . $basic_auth,
             ];
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Ryvr: Request headers being sent: ' . print_r($request_headers, true));
-                error_log('Ryvr: Using Guzzle with exact ReqBin headers');
+                error_log('Ryvr: Using direct cURL with exact ReqBin headers');
+                error_log('Ryvr: cURL headers: ' . print_r($curl_headers, true));
             }
             
-            // Use Guzzle with exact same headers as successful ReqBin test
-            $response = $client->request('GET', $validation_url, [
-                'auth' => [
-                    $credentials['login'],
-                    $credentials['password'],
-                ],
-                'headers' => $request_headers,
-                'timeout' => 30,
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $validation_url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => $curl_headers,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
             ]);
             
-            $status_code = $response->getStatusCode();
-            $body = $response->getBody()->getContents();
+            $body = curl_exec($ch);
+            $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curl_error = curl_error($ch);
+            curl_close($ch);
+            
+            if ($curl_error) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Ryvr: cURL error: ' . $curl_error);
+                }
+                throw new \Exception('cURL error: ' . $curl_error);
+            }
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 try {
                     error_log('');
                     error_log('--- API Response ---');
                     error_log('Ryvr: DataForSEO response status: ' . $status_code);
-                    error_log('Ryvr: DataForSEO response headers: ' . print_r($response->getHeaders(), true));
                     error_log('Ryvr: DataForSEO response body (first 500 chars): ' . substr($body, 0, 500));
                     
                     // Try to decode JSON to see structure
