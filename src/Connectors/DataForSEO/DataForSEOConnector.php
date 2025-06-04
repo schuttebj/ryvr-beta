@@ -201,17 +201,24 @@ class DataForSEOConnector extends AbstractConnector
             }
             
             // Use user_data endpoint (same as successful ReqBin test) with browser User-Agent
+            $request_headers = [
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+                'Accept' => '*/*',
+                'Accept-Encoding' => 'deflate, gzip',
+            ];
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: Request headers being sent: ' . print_r($request_headers, true));
+                error_log('Ryvr: Using Guzzle with exact ReqBin headers');
+            }
+            
+            // Use Guzzle with exact same headers as successful ReqBin test
             $response = $client->request('GET', $validation_url, [
                 'auth' => [
                     $credentials['login'],
                     $credentials['password'],
                 ],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
-                    'Accept' => '*/*',
-                    'Accept-Encoding' => 'deflate, gzip',
-                ],
+                'headers' => $request_headers,
                 'timeout' => 30,
             ]);
             
