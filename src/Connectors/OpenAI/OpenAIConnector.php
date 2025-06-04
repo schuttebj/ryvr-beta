@@ -150,7 +150,11 @@ class OpenAIConnector extends AbstractConnector
     public function validate_auth(array $credentials): bool
     {
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Ryvr: OpenAI validate_auth called with credentials: ' . print_r($credentials, true));
+            try {
+                error_log('Ryvr: OpenAI validate_auth called with credentials: ' . print_r($credentials, true));
+            } catch (\Exception $e) {
+                error_log('Ryvr: OpenAI debug logging error: ' . $e->getMessage());
+            }
         }
         
         if (empty($credentials['api_key'])) {
@@ -165,9 +169,13 @@ class OpenAIConnector extends AbstractConnector
             $api_url = $this->getApiUrl($credentials);
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Ryvr: OpenAI making request to: ' . $api_url . '/models');
-                error_log('Ryvr: OpenAI API key length: ' . strlen($credentials['api_key']));
-                error_log('Ryvr: OpenAI API key starts with: ' . substr($credentials['api_key'], 0, 10) . '...');
+                try {
+                    error_log('Ryvr: OpenAI making request to: ' . $api_url . '/models');
+                    error_log('Ryvr: OpenAI API key length: ' . strlen($credentials['api_key']));
+                    error_log('Ryvr: OpenAI API key starts with: ' . substr($credentials['api_key'], 0, 10) . '...');
+                } catch (\Exception $e) {
+                    error_log('Ryvr: OpenAI debug logging error: ' . $e->getMessage());
+                }
             }
             
             $headers = [
@@ -183,7 +191,11 @@ class OpenAIConnector extends AbstractConnector
             }
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Ryvr: OpenAI request headers: ' . print_r($headers, true));
+                try {
+                    error_log('Ryvr: OpenAI request headers: ' . print_r($headers, true));
+                } catch (\Exception $e) {
+                    error_log('Ryvr: OpenAI debug logging error: ' . $e->getMessage());
+                }
             }
             
             $response = $client->request('GET', $api_url . '/models', [
@@ -195,8 +207,12 @@ class OpenAIConnector extends AbstractConnector
             $body = $response->getBody()->getContents();
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Ryvr: OpenAI response status: ' . $status_code);
-                error_log('Ryvr: OpenAI response body (first 200 chars): ' . substr($body, 0, 200));
+                try {
+                    error_log('Ryvr: OpenAI response status: ' . $status_code);
+                    error_log('Ryvr: OpenAI response body (first 200 chars): ' . substr($body, 0, 200));
+                } catch (\Exception $e) {
+                    error_log('Ryvr: OpenAI debug logging error: ' . $e->getMessage());
+                }
             }
             
             $success = $status_code === 200;
@@ -212,9 +228,13 @@ class OpenAIConnector extends AbstractConnector
             $response_body = $e->getResponse() ? $e->getResponse()->getBody()->getContents() : 'no response';
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Ryvr: OpenAI ClientException - Status: ' . $status_code);
-                error_log('Ryvr: OpenAI ClientException - Response: ' . $response_body);
-                error_log('Ryvr: OpenAI ClientException - Message: ' . $e->getMessage());
+                try {
+                    error_log('Ryvr: OpenAI ClientException - Status: ' . $status_code);
+                    error_log('Ryvr: OpenAI ClientException - Response: ' . $response_body);
+                    error_log('Ryvr: OpenAI ClientException - Message: ' . $e->getMessage());
+                } catch (\Exception $debug_e) {
+                    error_log('Ryvr: OpenAI debug logging error: ' . $debug_e->getMessage());
+                }
             }
             
             return false;
@@ -235,8 +255,12 @@ class OpenAIConnector extends AbstractConnector
             
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Ryvr: OpenAI general exception: ' . $e->getMessage());
-                error_log('Ryvr: OpenAI exception trace: ' . $e->getTraceAsString());
+                try {
+                    error_log('Ryvr: OpenAI general exception: ' . $e->getMessage());
+                    error_log('Ryvr: OpenAI exception trace: ' . $e->getTraceAsString());
+                } catch (\Exception $debug_e) {
+                    error_log('Ryvr: OpenAI debug logging error: ' . $debug_e->getMessage());
+                }
             }
             
             return false;
