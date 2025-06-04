@@ -31,6 +31,7 @@ class Installer
             $this->get_logs_table_sql($charset_collate),
             $this->get_api_keys_table_sql($charset_collate),
             $this->get_settings_table_sql($charset_collate),
+            $this->get_async_tasks_table_sql($charset_collate),
         ];
         
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -217,6 +218,42 @@ class Installer
             PRIMARY KEY  (id),
             UNIQUE KEY setting_key_user_id (setting_key, user_id),
             KEY setting_key (setting_key)
+        ) $charset_collate;";
+    }
+    
+    /**
+     * Get SQL for creating the async tasks table.
+     *
+     * @param string $charset_collate The charset collate string.
+     *
+     * @return string The SQL for creating the table.
+     *
+     * @since 1.0.0
+     */
+    private function get_async_tasks_table_sql(string $charset_collate): string
+    {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . 'ryvr_async_tasks';
+        
+        return "CREATE TABLE $table_name (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            external_task_id varchar(255) NOT NULL,
+            connector_id varchar(100) NOT NULL,
+            action_id varchar(100) NOT NULL,
+            workflow_run_id bigint(20) unsigned NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            check_interval int(11) NOT NULL DEFAULT 30,
+            next_check datetime NULL,
+            result_data longtext NULL,
+            error_message text NULL,
+            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            completed_at datetime NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY external_task_id (external_task_id),
+            KEY workflow_run_id (workflow_run_id),
+            KEY status (status),
+            KEY next_check (next_check)
         ) $charset_collate;";
     }
 } 

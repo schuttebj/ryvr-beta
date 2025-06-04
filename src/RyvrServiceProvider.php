@@ -93,6 +93,14 @@ class RyvrServiceProvider
             $settings = new Admin\Settings();
             $settings->register();
         }
+        
+        // Load workflow builder
+        $builder_file = RYVR_PLUGIN_DIR . 'src/Admin/WorkflowBuilder.php';
+        if (file_exists($builder_file)) {
+            require_once $builder_file;
+            $builder = new Admin\WorkflowBuilder();
+            $builder->register();
+        }
     }
     
     /**

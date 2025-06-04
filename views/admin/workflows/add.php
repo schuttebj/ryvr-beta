@@ -2067,7 +2067,7 @@ jQuery(document).ready(function($) {
 .ryvr-workflow-editor-body {
     display: flex;
     gap: 20px;
-    flex-direction: row;
+    flex-direction: column;
 }
 
 .ryvr-workflow-editor-main {
@@ -2076,7 +2076,7 @@ jQuery(document).ready(function($) {
 }
 
 .ryvr-workflow-editor-sidebar {
-    width: 250px;
+    width: 100%;
     flex-shrink: 0;
 }
 

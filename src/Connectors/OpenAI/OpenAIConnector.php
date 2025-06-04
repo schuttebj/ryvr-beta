@@ -7,9 +7,12 @@ use Ryvr\Connectors\AbstractConnector;
 use Ryvr\Admin\Settings;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+use Psr\Http\Message\StreamFactoryInterface;
 
 /**
- * OpenAI connector.
+ * OpenAI connector with comprehensive API support.
  *
  * @since 1.0.0
  */
@@ -21,6 +24,9 @@ class OpenAIConnector extends AbstractConnector
      * @var string
      */
     private const API_URL = 'https://api.openai.com/v1';
+    
+    private array $cachedModels = [];
+    private int $modelsCacheExpiry = 0;
     
     /**
      * Get the connector ID.
@@ -170,77 +176,133 @@ class OpenAIConnector extends AbstractConnector
     public function get_actions(): array
     {
         return [
-            'generate_text' => [
-                'label' => __('Generate Text', 'ryvr'),
-                'description' => __('Generate text using OpenAI\'s GPT models.', 'ryvr'),
-                'fields' => [
-                    'model' => [
-                        'label' => __('Model', 'ryvr'),
-                        'type' => 'select',
-                        'required' => true,
-                        'options' => [
-                            'gpt-4o' => 'GPT-4o',
-                            'gpt-4-turbo' => 'GPT-4 Turbo',
-                            'gpt-4' => 'GPT-4',
-                            'gpt-3.5-turbo' => 'GPT-3.5 Turbo',
-                        ],
-                        'default' => 'gpt-3.5-turbo',
-                    ],
-                    'prompt' => [
-                        'label' => __('Prompt', 'ryvr'),
-                        'type' => 'textarea',
-                        'required' => true,
-                        'description' => __('The prompt to generate text from.', 'ryvr'),
-                    ],
-                    'max_tokens' => [
-                        'label' => __('Max Tokens', 'ryvr'),
-                        'type' => 'number',
-                        'required' => false,
-                        'description' => __('Maximum number of tokens to generate.', 'ryvr'),
-                        'default' => 1024,
-                    ],
-                    'temperature' => [
-                        'label' => __('Temperature', 'ryvr'),
-                        'type' => 'number',
-                        'required' => false,
-                        'description' => __('Controls randomness. Lower values are more focused, higher values are more creative.', 'ryvr'),
-                        'default' => 0.7,
-                    ],
+            'chat_completion' => [
+                'name' => 'Chat Completion',
+                'description' => 'Generate text using chat models',
+                'category' => 'text_generation',
+                'parameters' => [
+                    'required' => ['messages'],
+                    'optional' => [
+                        'model', 'max_tokens', 'temperature', 'top_p', 'n',
+                        'stream', 'stop', 'presence_penalty', 'frequency_penalty',
+                        'logit_bias', 'user', 'response_format', 'seed', 'tools',
+                        'tool_choice', 'parallel_tool_calls', 'json_schema'
+                    ]
                 ],
+                'output_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'content' => ['type' => 'string'],
+                        'role' => ['type' => 'string'],
+                        'finish_reason' => ['type' => 'string'],
+                        'usage' => ['type' => 'object']
+                    ]
+                ]
             ],
-            'generate_image' => [
-                'label' => __('Generate Image', 'ryvr'),
-                'description' => __('Generate an image using DALL-E models.', 'ryvr'),
-                'fields' => [
-                    'model' => [
-                        'label' => __('Model', 'ryvr'),
-                        'type' => 'select',
-                        'required' => true,
-                        'options' => [
-                            'dall-e-3' => 'DALL-E 3',
-                            'dall-e-2' => 'DALL-E 2',
-                        ],
-                        'default' => 'dall-e-3',
-                    ],
-                    'prompt' => [
-                        'label' => __('Prompt', 'ryvr'),
-                        'type' => 'textarea',
-                        'required' => true,
-                        'description' => __('The prompt to generate an image from.', 'ryvr'),
-                    ],
-                    'size' => [
-                        'label' => __('Size', 'ryvr'),
-                        'type' => 'select',
-                        'required' => false,
-                        'options' => [
-                            '1024x1024' => '1024x1024',
-                            '1024x1792' => '1024x1792',
-                            '1792x1024' => '1792x1024',
-                        ],
-                        'default' => '1024x1024',
-                    ],
+            'embeddings' => [
+                'name' => 'Create Embeddings',
+                'description' => 'Create vector embeddings for text',
+                'category' => 'embeddings',
+                'parameters' => [
+                    'required' => ['input'],
+                    'optional' => ['model', 'encoding_format', 'dimensions', 'user']
                 ],
+                'output_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'data' => [
+                            'type' => 'array',
+                            'items' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'embedding' => ['type' => 'array'],
+                                    'index' => ['type' => 'integer']
+                                ]
+                            ]
+                        ],
+                        'usage' => ['type' => 'object']
+                    ]
+                ]
             ],
+            'image_generation' => [
+                'name' => 'Generate Images',
+                'description' => 'Create images from text descriptions',
+                'category' => 'image_generation',
+                'parameters' => [
+                    'required' => ['prompt'],
+                    'optional' => ['model', 'n', 'quality', 'response_format', 'size', 'style', 'user']
+                ],
+                'output_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'data' => [
+                            'type' => 'array',
+                            'items' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'url' => ['type' => 'string'],
+                                    'b64_json' => ['type' => 'string'],
+                                    'revised_prompt' => ['type' => 'string']
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            'image_edit' => [
+                'name' => 'Edit Images',
+                'description' => 'Edit images using text descriptions',
+                'category' => 'image_editing',
+                'parameters' => [
+                    'required' => ['image', 'prompt'],
+                    'optional' => ['mask', 'model', 'n', 'size', 'response_format', 'user']
+                ]
+            ],
+            'image_variation' => [
+                'name' => 'Create Image Variations',
+                'description' => 'Create variations of existing images',
+                'category' => 'image_editing',
+                'parameters' => [
+                    'required' => ['image'],
+                    'optional' => ['model', 'n', 'response_format', 'size', 'user']
+                ]
+            ],
+            'audio_transcription' => [
+                'name' => 'Transcribe Audio',
+                'description' => 'Convert audio to text',
+                'category' => 'audio',
+                'parameters' => [
+                    'required' => ['file'],
+                    'optional' => ['model', 'language', 'prompt', 'response_format', 'temperature', 'timestamp_granularities']
+                ]
+            ],
+            'audio_translation' => [
+                'name' => 'Translate Audio',
+                'description' => 'Translate audio to English text',
+                'category' => 'audio',
+                'parameters' => [
+                    'required' => ['file'],
+                    'optional' => ['model', 'prompt', 'response_format', 'temperature']
+                ]
+            ],
+            'text_to_speech' => [
+                'name' => 'Text to Speech',
+                'description' => 'Convert text to spoken audio',
+                'category' => 'audio',
+                'parameters' => [
+                    'required' => ['input', 'voice'],
+                    'optional' => ['model', 'response_format', 'speed']
+                ]
+            ],
+            'moderation' => [
+                'name' => 'Content Moderation',
+                'description' => 'Check content for policy violations',
+                'category' => 'safety',
+                'parameters' => [
+                    'required' => ['input'],
+                    'optional' => ['model']
+                ]
+            ]
         ];
     }
     
@@ -272,154 +334,350 @@ class OpenAIConnector extends AbstractConnector
      */
     public function execute_action(string $action_id, array $params, array $auth): array
     {
+        $this->init($auth);
+        
         switch ($action_id) {
-            case 'generate_text':
-                return $this->generate_text($params, $auth);
-                
-            case 'generate_image':
-                return $this->generate_image($params, $auth);
-                
+            case 'chat_completion':
+                return $this->chat_completion($params);
+            case 'embeddings':
+                return $this->create_embeddings($params);
+            case 'image_generation':
+                return $this->generate_image($params);
+            case 'image_edit':
+                return $this->edit_image($params);
+            case 'image_variation':
+                return $this->create_image_variation($params);
+            case 'audio_transcription':
+                return $this->transcribe_audio($params);
+            case 'audio_translation':
+                return $this->translate_audio($params);
+            case 'text_to_speech':
+                return $this->text_to_speech($params);
+            case 'moderation':
+                return $this->moderate_content($params);
             default:
-                throw new \Exception(
-                    sprintf(__('Unsupported action: %s', 'ryvr'), $action_id)
-                );
+                throw new \InvalidArgumentException("Unknown action: {$action_id}");
         }
     }
     
     /**
-     * Generate text using OpenAI's API.
+     * Get available models from OpenAI API.
      *
-     * @param array $params Action parameters.
-     * @param array $auth   Authentication credentials.
-     *
-     * @return array Result of the action execution.
-     *
-     * @throws \Exception If the API request fails.
-     *
-     * @since 1.0.0
+     * @return array
      */
-    private function generate_text(array $params, array $auth): array
+    public function get_available_models(): array
     {
+        // Check cache first
+        if (!empty($this->cachedModels) && time() < $this->modelsCacheExpiry) {
+            return $this->cachedModels;
+        }
+
         try {
-            $client = new Client();
-            $api_url = $this->getApiUrl($auth);
+            $response = $this->make_request('GET', '/models');
+            $models = [];
             
-            $headers = [
-                'Authorization' => 'Bearer ' . $auth['api_key'],
-                'Content-Type' => 'application/json',
-            ];
-            
-            if (!empty($auth['organization_id'])) {
-                $headers['OpenAI-Organization'] = $auth['organization_id'];
+            if (isset($response['data'])) {
+                foreach ($response['data'] as $model) {
+                    $models[] = [
+                        'id' => $model['id'],
+                        'name' => $model['id'],
+                        'category' => $this->categorize_model($model['id']),
+                        'owned_by' => $model['owned_by'] ?? 'openai'
+                    ];
+                }
+                
+                // Sort models by category and name
+                usort($models, function($a, $b) {
+                    if ($a['category'] !== $b['category']) {
+                        return strcmp($a['category'], $b['category']);
+                    }
+                    return strcmp($a['id'], $b['id']);
+                });
             }
             
-            $data = [
-                'model' => $params['model'] ?? 'gpt-3.5-turbo',
-                'messages' => [
-                    [
-                        'role' => 'user',
-                        'content' => $params['prompt'] ?? '',
-                    ],
-                ],
-                'max_tokens' => (int) ($params['max_tokens'] ?? 1024),
-                'temperature' => (float) ($params['temperature'] ?? 0.7),
-            ];
+            // Cache for 1 hour
+            $this->cachedModels = $models;
+            $this->modelsCacheExpiry = time() + 3600;
             
-            $response = $client->request('POST', $api_url . '/chat/completions', [
-                'headers' => $headers,
-                'json' => $data,
-            ]);
+            return $models;
             
-            $result = json_decode($response->getBody()->getContents(), true);
-            
-            if (!$result || !isset($result['choices'][0]['message']['content'])) {
-                throw new \Exception(__('Invalid response from OpenAI API', 'ryvr'));
-            }
-            
-            return [
-                'text' => $result['choices'][0]['message']['content'],
-                'usage' => $result['usage'] ?? [],
-                'model' => $result['model'] ?? $data['model'],
-            ];
-        } catch (GuzzleException $e) {
-            $this->log(
-                'Failed to generate text with OpenAI: ' . $e->getMessage(),
-                [
-                    'error' => $e->getMessage(),
-                    'params' => $params,
-                ],
-                'error'
-            );
-            
-            throw new \Exception(
-                sprintf(__('Failed to generate text: %s', 'ryvr'), $e->getMessage())
-            );
+        } catch (\Exception $e) {
+            // Fallback to default models if API call fails
+            return $this->get_default_models();
         }
     }
-    
+
     /**
-     * Generate an image using OpenAI's API.
+     * Get default models as fallback.
      *
-     * @param array $params Action parameters.
-     * @param array $auth   Authentication credentials.
-     *
-     * @return array Result of the action execution.
-     *
-     * @throws \Exception If the API request fails.
-     *
-     * @since 1.0.0
+     * @return array
      */
-    private function generate_image(array $params, array $auth): array
+    private function get_default_models(): array
     {
+        return [
+            ['id' => 'gpt-4o', 'name' => 'GPT-4o', 'category' => 'chat'],
+            ['id' => 'gpt-4o-mini', 'name' => 'GPT-4o Mini', 'category' => 'chat'],
+            ['id' => 'gpt-4-turbo', 'name' => 'GPT-4 Turbo', 'category' => 'chat'],
+            ['id' => 'gpt-3.5-turbo', 'name' => 'GPT-3.5 Turbo', 'category' => 'chat'],
+            ['id' => 'text-embedding-3-large', 'name' => 'Text Embedding 3 Large', 'category' => 'embeddings'],
+            ['id' => 'text-embedding-3-small', 'name' => 'Text Embedding 3 Small', 'category' => 'embeddings'],
+            ['id' => 'dall-e-3', 'name' => 'DALL-E 3', 'category' => 'image'],
+            ['id' => 'dall-e-2', 'name' => 'DALL-E 2', 'category' => 'image'],
+            ['id' => 'whisper-1', 'name' => 'Whisper', 'category' => 'audio'],
+            ['id' => 'tts-1', 'name' => 'TTS', 'category' => 'audio'],
+            ['id' => 'tts-1-hd', 'name' => 'TTS HD', 'category' => 'audio']
+        ];
+    }
+
+    /**
+     * Categorize model by its ID.
+     *
+     * @param string $modelId
+     * @return string
+     */
+    private function categorize_model(string $modelId): string
+    {
+        if (str_contains($modelId, 'gpt')) {
+            return 'chat';
+        }
+        if (str_contains($modelId, 'embedding')) {
+            return 'embeddings';
+        }
+        if (str_contains($modelId, 'dall-e')) {
+            return 'image';
+        }
+        if (str_contains($modelId, 'whisper') || str_contains($modelId, 'tts')) {
+            return 'audio';
+        }
+        if (str_contains($modelId, 'moderation')) {
+            return 'safety';
+        }
+        
+        return 'other';
+    }
+
+    /**
+     * Chat completion with JSON Schema support.
+     *
+     * @param array $params
+     * @return array
+     */
+    private function chat_completion(array $params): array
+    {
+        $payload = [
+            'model' => $params['model'] ?? 'gpt-4o',
+            'messages' => $params['messages']
+        ];
+
+        // Add optional parameters
+        $optional_params = [
+            'max_tokens', 'temperature', 'top_p', 'n', 'stream', 'stop',
+            'presence_penalty', 'frequency_penalty', 'logit_bias', 'user',
+            'seed', 'tools', 'tool_choice', 'parallel_tool_calls'
+        ];
+
+        foreach ($optional_params as $param) {
+            if (isset($params[$param])) {
+                $payload[$param] = $params[$param];
+            }
+        }
+
+        // Handle JSON Schema response format
+        if (isset($params['json_schema'])) {
+            $payload['response_format'] = [
+                'type' => 'json_schema',
+                'json_schema' => $params['json_schema']
+            ];
+        } elseif (isset($params['response_format'])) {
+            $payload['response_format'] = $params['response_format'];
+        }
+
+        return $this->make_request('POST', '/chat/completions', $payload);
+    }
+
+    /**
+     * Create embeddings.
+     *
+     * @param array $params
+     * @return array
+     */
+    private function create_embeddings(array $params): array
+    {
+        $payload = [
+            'model' => $params['model'] ?? 'text-embedding-3-small',
+            'input' => $params['input']
+        ];
+
+        $optional_params = ['encoding_format', 'dimensions', 'user'];
+        foreach ($optional_params as $param) {
+            if (isset($params[$param])) {
+                $payload[$param] = $params[$param];
+            }
+        }
+
+        return $this->make_request('POST', '/embeddings', $payload);
+    }
+
+    /**
+     * Generate image.
+     *
+     * @param array $params
+     * @return array
+     */
+    private function generate_image(array $params): array
+    {
+        $payload = [
+            'model' => $params['model'] ?? 'dall-e-3',
+            'prompt' => $params['prompt']
+        ];
+
+        $optional_params = ['n', 'quality', 'response_format', 'size', 'style', 'user'];
+        foreach ($optional_params as $param) {
+            if (isset($params[$param])) {
+                $payload[$param] = $params[$param];
+            }
+        }
+
+        return $this->make_request('POST', '/images/generations', $payload);
+    }
+
+    /**
+     * Edit image.
+     *
+     * @param array $params
+     * @return array
+     */
+    private function edit_image(array $params): array
+    {
+        // This requires multipart/form-data, more complex implementation needed
+        throw new \Exception('Image editing not yet implemented - requires file upload handling');
+    }
+
+    /**
+     * Create image variation.
+     *
+     * @param array $params
+     * @return array
+     */
+    private function create_image_variation(array $params): array
+    {
+        // This requires multipart/form-data, more complex implementation needed
+        throw new \Exception('Image variations not yet implemented - requires file upload handling');
+    }
+
+    /**
+     * Transcribe audio.
+     *
+     * @param array $params
+     * @return array
+     */
+    private function transcribe_audio(array $params): array
+    {
+        // This requires multipart/form-data, more complex implementation needed
+        throw new \Exception('Audio transcription not yet implemented - requires file upload handling');
+    }
+
+    /**
+     * Translate audio.
+     *
+     * @param array $params
+     * @return array
+     */
+    private function translate_audio(array $params): array
+    {
+        // This requires multipart/form-data, more complex implementation needed
+        throw new \Exception('Audio translation not yet implemented - requires file upload handling');
+    }
+
+    /**
+     * Text to speech.
+     *
+     * @param array $params
+     * @return array
+     */
+    private function text_to_speech(array $params): array
+    {
+        $payload = [
+            'model' => $params['model'] ?? 'tts-1',
+            'input' => $params['input'],
+            'voice' => $params['voice']
+        ];
+
+        $optional_params = ['response_format', 'speed'];
+        foreach ($optional_params as $param) {
+            if (isset($params[$param])) {
+                $payload[$param] = $params[$param];
+            }
+        }
+
+        return $this->make_request('POST', '/audio/speech', $payload);
+    }
+
+    /**
+     * Moderate content.
+     *
+     * @param array $params
+     * @return array
+     */
+    private function moderate_content(array $params): array
+    {
+        $payload = [
+            'input' => $params['input']
+        ];
+
+        if (isset($params['model'])) {
+            $payload['model'] = $params['model'];
+        }
+
+        return $this->make_request('POST', '/moderations', $payload);
+    }
+
+    /**
+     * Make HTTP request to OpenAI API.
+     *
+     * @param string $method
+     * @param string $endpoint
+     * @param array $data
+     * @return array
+     */
+    private function make_request(string $method, string $endpoint, array $data = []): array
+    {
+        $url = self::API_URL . $endpoint;
+        
+        $headers = [
+            'Authorization' => 'Bearer ' . $this->auth['api_key'],
+            'Content-Type' => 'application/json',
+            'User-Agent' => 'Ryvr/1.0'
+        ];
+
+        if (isset($this->auth['organization_id'])) {
+            $headers['OpenAI-Organization'] = $this->auth['organization_id'];
+        }
+
+        $request = $this->requestFactory->createRequest($method, $url);
+        
+        foreach ($headers as $name => $value) {
+            $request = $request->withHeader($name, $value);
+        }
+
+        if (!empty($data)) {
+            $request = $request->withBody(
+                $this->streamFactory->createStream(json_encode($data))
+            );
+        }
+
         try {
-            $client = new Client();
-            $api_url = $this->getApiUrl($auth);
+            $response = $this->httpClient->sendRequest($request);
+            $body = $response->getBody()->getContents();
             
-            $headers = [
-                'Authorization' => 'Bearer ' . $auth['api_key'],
-                'Content-Type' => 'application/json',
-            ];
-            
-            if (!empty($auth['organization_id'])) {
-                $headers['OpenAI-Organization'] = $auth['organization_id'];
+            if ($response->getStatusCode() >= 400) {
+                throw new \Exception("OpenAI API error: {$body}");
             }
             
-            $data = [
-                'model' => $params['model'] ?? 'dall-e-3',
-                'prompt' => $params['prompt'] ?? '',
-                'n' => 1,
-                'size' => $params['size'] ?? '1024x1024',
-                'response_format' => 'url',
-            ];
+            return json_decode($body, true) ?: [];
             
-            $response = $client->request('POST', $api_url . '/images/generations', [
-                'headers' => $headers,
-                'json' => $data,
-            ]);
-            
-            $result = json_decode($response->getBody()->getContents(), true);
-            
-            if (!$result || !isset($result['data'][0]['url'])) {
-                throw new \Exception(__('Invalid response from OpenAI API', 'ryvr'));
-            }
-            
-            return [
-                'image_url' => $result['data'][0]['url'],
-                'model' => $data['model'],
-            ];
-        } catch (GuzzleException $e) {
-            $this->log(
-                'Failed to generate image with OpenAI: ' . $e->getMessage(),
-                [
-                    'error' => $e->getMessage(),
-                    'params' => $params,
-                ],
-                'error'
-            );
-            
-            throw new \Exception(
-                sprintf(__('Failed to generate image: %s', 'ryvr'), $e->getMessage())
-            );
+        } catch (\Exception $e) {
+            throw new \Exception("OpenAI connector error: " . $e->getMessage());
         }
     }
 } 

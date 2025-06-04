@@ -9,7 +9,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 
 /**
- * DataForSEO connector.
+ * DataForSEO connector with comprehensive API support.
  *
  * @since 1.0.0
  */
@@ -172,84 +172,316 @@ class DataForSEOConnector extends AbstractConnector
     public function get_actions(): array
     {
         return [
-            'keyword_research' => [
-                'label' => __('Keyword Research', 'ryvr'),
-                'description' => __('Research keywords and get related search queries.', 'ryvr'),
-                'fields' => [
-                    'keyword' => [
-                        'label' => __('Keyword', 'ryvr'),
-                        'type' => 'text',
-                        'required' => true,
-                        'description' => __('The keyword to research.', 'ryvr'),
-                    ],
-                    'location_code' => [
-                        'label' => __('Location Code', 'ryvr'),
-                        'type' => 'text',
-                        'required' => false,
-                        'description' => __('Location code (e.g., 2840 for United States).', 'ryvr'),
-                        'default' => '2840',
-                    ],
-                    'language_code' => [
-                        'label' => __('Language Code', 'ryvr'),
-                        'type' => 'text',
-                        'required' => false,
-                        'description' => __('Language code (e.g., en for English).', 'ryvr'),
-                        'default' => 'en',
-                    ],
+            // SERP API
+            'serp_google_organic' => [
+                'name' => 'Google Organic SERP',
+                'description' => 'Get Google organic search results',
+                'category' => 'serp',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['keyword'],
+                    'optional' => [
+                        'location_name', 'location_code', 'location_coordinate',
+                        'language_name', 'language_code', 'device', 'os',
+                        'depth', 'max_crawl_pages', 'search_param', 'date_from',
+                        'date_to', 'sort_by', 'tag', 'postback_url', 'pingback_url'
+                    ]
                 ],
+                'output_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'results' => ['type' => 'array'],
+                        'total_count' => ['type' => 'integer'],
+                        'items_count' => ['type' => 'integer']
+                    ]
+                ]
             ],
-            'serp_analysis' => [
-                'label' => __('SERP Analysis', 'ryvr'),
-                'description' => __('Analyze search engine results for a specific keyword.', 'ryvr'),
-                'fields' => [
-                    'keyword' => [
-                        'label' => __('Keyword', 'ryvr'),
-                        'type' => 'text',
-                        'required' => true,
-                        'description' => __('The keyword to analyze.', 'ryvr'),
-                    ],
-                    'location_code' => [
-                        'label' => __('Location Code', 'ryvr'),
-                        'type' => 'text',
-                        'required' => false,
-                        'description' => __('Location code (e.g., 2840 for United States).', 'ryvr'),
-                        'default' => '2840',
-                    ],
-                    'language_code' => [
-                        'label' => __('Language Code', 'ryvr'),
-                        'type' => 'text',
-                        'required' => false,
-                        'description' => __('Language code (e.g., en for English).', 'ryvr'),
-                        'default' => 'en',
-                    ],
+            'serp_google_ads' => [
+                'name' => 'Google Ads SERP',
+                'description' => 'Get Google Ads search results',
+                'category' => 'serp',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['keyword'],
+                    'optional' => [
+                        'location_name', 'location_code', 'location_coordinate',
+                        'language_name', 'language_code', 'device', 'os',
+                        'depth', 'max_crawl_pages', 'search_param', 'date_from',
+                        'date_to', 'sort_by', 'tag', 'postback_url', 'pingback_url'
+                    ]
+                ]
+            ],
+            'serp_google_shopping' => [
+                'name' => 'Google Shopping SERP',
+                'description' => 'Get Google Shopping search results',
+                'category' => 'serp',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['keyword'],
+                    'optional' => [
+                        'location_name', 'location_code', 'location_coordinate',
+                        'language_name', 'language_code', 'device', 'os',
+                        'depth', 'max_crawl_pages', 'search_param', 'date_from',
+                        'date_to', 'sort_by', 'tag', 'postback_url', 'pingback_url'
+                    ]
+                ]
+            ],
+            
+            // Keywords API
+            'keywords_for_keywords' => [
+                'name' => 'Keywords for Keywords',
+                'description' => 'Get keyword suggestions based on seed keywords',
+                'category' => 'keywords',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['keywords'],
+                    'optional' => [
+                        'location_name', 'location_code', 'language_name', 'language_code',
+                        'search_partners', 'date_from', 'date_to', 'include_serp_info',
+                        'include_clickstream_data', 'sort_by', 'filters', 'order_by',
+                        'limit', 'offset', 'tag', 'postback_url', 'pingback_url'
+                    ]
                 ],
+                'output_schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'keywords' => [
+                            'type' => 'array',
+                            'items' => [
+                                'type' => 'object',
+                                'properties' => [
+                                    'keyword' => ['type' => 'string'],
+                                    'search_volume' => ['type' => 'integer'],
+                                    'cpc' => ['type' => 'number'],
+                                    'competition' => ['type' => 'number'],
+                                    'competition_level' => ['type' => 'string']
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
             ],
-            'competitor_research' => [
-                'label' => __('Competitor Research', 'ryvr'),
-                'description' => __('Analyze competitor domains and their keywords.', 'ryvr'),
-                'fields' => [
-                    'domain' => [
-                        'label' => __('Domain', 'ryvr'),
-                        'type' => 'text',
-                        'required' => true,
-                        'description' => __('The competitor domain to analyze.', 'ryvr'),
-                    ],
-                    'location_code' => [
-                        'label' => __('Location Code', 'ryvr'),
-                        'type' => 'text',
-                        'required' => false,
-                        'description' => __('Location code (e.g., 2840 for United States).', 'ryvr'),
-                        'default' => '2840',
-                    ],
-                    'language_code' => [
-                        'label' => __('Language Code', 'ryvr'),
-                        'type' => 'text',
-                        'required' => false,
-                        'description' => __('Language code (e.g., en for English).', 'ryvr'),
-                        'default' => 'en',
-                    ],
-                ],
+            'keywords_for_site' => [
+                'name' => 'Keywords for Site',
+                'description' => 'Get keywords that a website ranks for',
+                'category' => 'keywords',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['target'],
+                    'optional' => [
+                        'location_name', 'location_code', 'language_name', 'language_code',
+                        'search_partners', 'date_from', 'date_to', 'include_serp_info',
+                        'include_clickstream_data', 'sort_by', 'filters', 'order_by',
+                        'limit', 'offset', 'tag', 'postback_url', 'pingback_url'
+                    ]
+                ]
             ],
+            'keyword_suggestions' => [
+                'name' => 'Keyword Suggestions',
+                'description' => 'Get keyword suggestions from autocomplete',
+                'category' => 'keywords',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['keyword'],
+                    'optional' => [
+                        'location_name', 'location_code', 'language_name', 'language_code',
+                        'search_partners', 'date_from', 'date_to', 'include_serp_info',
+                        'include_clickstream_data', 'sort_by', 'filters', 'order_by',
+                        'limit', 'offset', 'tag', 'postback_url', 'pingback_url'
+                    ]
+                ]
+            ],
+            
+            // Backlinks API
+            'backlinks_overview' => [
+                'name' => 'Backlinks Overview',
+                'description' => 'Get backlinks overview for a domain',
+                'category' => 'backlinks',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['target'],
+                    'optional' => [
+                        'include_subdomains', 'backlinks_status_type', 'internal_list_limit',
+                        'limit', 'offset', 'filters', 'order_by', 'tag', 'postback_url'
+                    ]
+                ]
+            ],
+            'backlinks_summary' => [
+                'name' => 'Backlinks Summary',
+                'description' => 'Get backlinks summary metrics',
+                'category' => 'backlinks',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['target'],
+                    'optional' => [
+                        'include_subdomains', 'backlinks_status_type', 'internal_list_limit',
+                        'limit', 'offset', 'filters', 'order_by', 'tag', 'postback_url'
+                    ]
+                ]
+            ],
+            'referring_domains' => [
+                'name' => 'Referring Domains',
+                'description' => 'Get referring domains for a target',
+                'category' => 'backlinks',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['target'],
+                    'optional' => [
+                        'include_subdomains', 'backlinks_status_type', 'internal_list_limit',
+                        'limit', 'offset', 'filters', 'order_by', 'tag', 'postback_url'
+                    ]
+                ]
+            ],
+            
+            // Domain Analytics
+            'domain_rank_overview' => [
+                'name' => 'Domain Rank Overview',
+                'description' => 'Get domain ranking metrics overview',
+                'category' => 'domain_analytics',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['target'],
+                    'optional' => [
+                        'location_name', 'location_code', 'language_name', 'language_code',
+                        'item_types', 'include_subdomains', 'load_rank_absolute',
+                        'historical_serp_mode', 'tag', 'postback_url'
+                    ]
+                ]
+            ],
+            'competitors_domain' => [
+                'name' => 'Competitors Domain',
+                'description' => 'Get competitors for a domain',
+                'category' => 'domain_analytics',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['target'],
+                    'optional' => [
+                        'location_name', 'location_code', 'language_name', 'language_code',
+                        'item_types', 'include_subdomains', 'load_rank_absolute',
+                        'historical_serp_mode', 'limit', 'offset', 'filters', 'order_by',
+                        'tag', 'postback_url'
+                    ]
+                ]
+            ],
+            
+            // On-Page API
+            'page_screenshot' => [
+                'name' => 'Page Screenshot',
+                'description' => 'Get screenshot of a webpage',
+                'category' => 'on_page',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['url'],
+                    'optional' => [
+                        'browser_preset', 'browser_screen_width', 'browser_screen_height',
+                        'browser_screen_scale_factor', 'store_raw_html', 'switch_pool',
+                        'tag', 'postback_url'
+                    ]
+                ]
+            ],
+            'raw_html' => [
+                'name' => 'Raw HTML',
+                'description' => 'Get raw HTML content of a webpage',
+                'category' => 'on_page',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['url'],
+                    'optional' => [
+                        'custom_user_agent', 'browser_preset', 'custom_js',
+                        'browser_screen_width', 'browser_screen_height',
+                        'browser_screen_scale_factor', 'enable_browser_rendering',
+                        'load_resources', 'enable_javascript', 'enable_images',
+                        'enable_stylesheets', 'enable_flash', 'custom_cookies',
+                        'switch_pool', 'return_only_status', 'tag', 'postback_url'
+                    ]
+                ]
+            ],
+            'page_insights' => [
+                'name' => 'Page Insights',
+                'description' => 'Get detailed page analysis and insights',
+                'category' => 'on_page',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['url'],
+                    'optional' => [
+                        'enable_javascript', 'custom_js', 'browser_preset',
+                        'browser_screen_width', 'browser_screen_height',
+                        'browser_screen_scale_factor', 'enable_browser_rendering',
+                        'load_resources', 'enable_images', 'enable_stylesheets',
+                        'enable_flash', 'custom_cookies', 'custom_user_agent',
+                        'switch_pool', 'tag', 'postback_url'
+                    ]
+                ]
+            ],
+            
+            // DataForSEO Trends
+            'google_trends_explore' => [
+                'name' => 'Google Trends Explore',
+                'description' => 'Get Google Trends data for keywords',
+                'category' => 'trends',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['keywords'],
+                    'optional' => [
+                        'location_name', 'location_code', 'language_name', 'language_code',
+                        'category_code', 'date_from', 'date_to', 'time_range',
+                        'item_types', 'tag', 'postback_url'
+                    ]
+                ]
+            ],
+            
+            // Business Data API
+            'business_listings' => [
+                'name' => 'Business Listings',
+                'description' => 'Get business listings data',
+                'category' => 'business_data',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['keyword'],
+                    'optional' => [
+                        'location_name', 'location_code', 'location_coordinate',
+                        'language_name', 'language_code', 'depth', 'sort_by',
+                        'tag', 'postback_url'
+                    ]
+                ]
+            ],
+            
+            // Content Analysis
+            'content_analysis_summary' => [
+                'name' => 'Content Analysis Summary',
+                'description' => 'Get content analysis summary',
+                'category' => 'content_analysis',
+                'async' => true,
+                'parameters' => [
+                    'required' => ['keyword'],
+                    'optional' => [
+                        'location_name', 'location_code', 'language_name', 'language_code',
+                        'device', 'os', 'tag', 'postback_url'
+                    ]
+                ]
+            ],
+            
+            // Task Management
+            'task_ready' => [
+                'name' => 'Get Task Results',
+                'description' => 'Get results for completed async tasks',
+                'category' => 'task_management',
+                'async' => false,
+                'parameters' => [
+                    'required' => ['id'],
+                    'optional' => []
+                ]
+            ],
+            'tasks_fixed' => [
+                'name' => 'Get Fixed Tasks',
+                'description' => 'Get list of completed tasks',
+                'category' => 'task_management',
+                'async' => false,
+                'parameters' => [
+                    'required' => [],
+                    'optional' => ['limit', 'offset']
+                ]
+            ]
         ];
     }
     
@@ -281,241 +513,221 @@ class DataForSEOConnector extends AbstractConnector
      */
     public function execute_action(string $action_id, array $params, array $auth): array
     {
+        $this->init($auth);
+        
+        $actions = $this->get_actions();
+        if (!isset($actions[$action_id])) {
+            throw new \InvalidArgumentException("Unknown action: {$action_id}");
+        }
+        
+        $action_config = $actions[$action_id];
+        
+        // Handle async vs sync operations
+        if ($action_config['async']) {
+            return $this->execute_async_action($action_id, $params);
+        } else {
+            return $this->execute_sync_action($action_id, $params);
+        }
+    }
+    
+    /**
+     * Execute async action (post task).
+     *
+     * @param string $action_id
+     * @param array $params
+     * @return array
+     */
+    private function execute_async_action(string $action_id, array $params): array
+    {
+        $endpoint = $this->get_post_endpoint($action_id);
+        $payload = $this->build_task_payload($action_id, $params);
+        
+        $response = $this->make_request('POST', $endpoint, [$payload]);
+        
+        // Return task ID for tracking
+        return [
+            'task_id' => $response['tasks'][0]['id'] ?? null,
+            'status' => 'posted',
+            'action' => $action_id,
+            'message' => 'Task posted successfully, use task_ready to get results'
+        ];
+    }
+    
+    /**
+     * Execute sync action (get results).
+     *
+     * @param string $action_id
+     * @param array $params
+     * @return array
+     */
+    private function execute_sync_action(string $action_id, array $params): array
+    {
         switch ($action_id) {
-            case 'keyword_research':
-                return $this->keyword_research($params, $auth);
-                
-            case 'serp_analysis':
-                return $this->serp_analysis($params, $auth);
-                
-            case 'competitor_research':
-                return $this->competitor_research($params, $auth);
-                
+            case 'task_ready':
+                return $this->get_task_results($params['id']);
+            case 'tasks_fixed':
+                return $this->get_completed_tasks($params);
             default:
-                throw new \Exception(
-                    sprintf(__('Unsupported action: %s', 'ryvr'), $action_id)
-                );
+                throw new \InvalidArgumentException("Unknown sync action: {$action_id}");
         }
     }
     
     /**
-     * Perform keyword research.
+     * Get task results.
      *
-     * @param array $params Action parameters.
-     * @param array $auth   Authentication credentials.
-     *
-     * @return array Result of the action execution.
-     *
-     * @throws \Exception If the API request fails.
-     *
-     * @since 1.0.0
+     * @param string $task_id
+     * @return array
      */
-    private function keyword_research(array $params, array $auth): array
+    private function get_task_results(string $task_id): array
     {
-        try {
-            $client = new Client();
-            $api_url = $this->getApiUrl($auth);
-            
-            $payload = [
-                [
-                    'keyword' => $params['keyword'] ?? '',
-                    'location_code' => $params['location_code'] ?? '2840',
-                    'language_code' => $params['language_code'] ?? 'en',
-                ],
-            ];
-            
-            $response = $client->request('POST', $api_url . '/keywords_data/google/search_volume/live', [
-                'auth' => [
-                    $auth['login'],
-                    $auth['password'],
-                ],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => $payload,
-            ]);
-            
-            $result = json_decode($response->getBody()->getContents(), true);
-            
-            if (!$result || !isset($result['tasks']) || !isset($result['tasks'][0]['result'])) {
-                throw new \Exception(__('Invalid response from DataForSEO API', 'ryvr'));
-            }
-            
-            return [
-                'search_volume' => $result['tasks'][0]['result'][0]['search_volume'] ?? 0,
-                'keyword_info' => $result['tasks'][0]['result'][0],
-            ];
-        } catch (GuzzleException $e) {
-            $this->log(
-                'Failed to perform keyword research with DataForSEO: ' . $e->getMessage(),
-                [
-                    'error' => $e->getMessage(),
-                    'params' => $params,
-                ],
-                'error'
-            );
-            
-            throw new \Exception(
-                sprintf(__('Failed to perform keyword research: %s', 'ryvr'), $e->getMessage())
-            );
-        }
+        $endpoint = "/task_get/ready/{$task_id}";
+        return $this->make_request('GET', $endpoint);
     }
     
     /**
-     * Perform SERP analysis.
+     * Get completed tasks.
      *
-     * @param array $params Action parameters.
-     * @param array $auth   Authentication credentials.
-     *
-     * @return array Result of the action execution.
-     *
-     * @throws \Exception If the API request fails.
-     *
-     * @since 1.0.0
+     * @param array $params
+     * @return array
      */
-    private function serp_analysis(array $params, array $auth): array
+    private function get_completed_tasks(array $params): array
     {
-        try {
-            $client = new Client();
-            $api_url = $this->getApiUrl($auth);
+        $endpoint = '/tasks_fixed';
+        $query_params = [];
+        
+        if (isset($params['limit'])) {
+            $query_params['limit'] = $params['limit'];
+        }
+        if (isset($params['offset'])) {
+            $query_params['offset'] = $params['offset'];
+        }
+        
+        if (!empty($query_params)) {
+            $endpoint .= '?' . http_build_query($query_params);
+        }
+        
+        return $this->make_request('GET', $endpoint);
+    }
+    
+    /**
+     * Get POST endpoint for action.
+     *
+     * @param string $action_id
+     * @return string
+     */
+    private function get_post_endpoint(string $action_id): string
+    {
+        $endpoint_map = [
+            // SERP endpoints
+            'serp_google_organic' => '/serp/google/organic/task_post',
+            'serp_google_ads' => '/serp/google/paid/task_post',
+            'serp_google_shopping' => '/serp/google/shopping/task_post',
             
-            $payload = [
-                [
-                    'keyword' => $params['keyword'] ?? '',
-                    'location_code' => $params['location_code'] ?? '2840',
-                    'language_code' => $params['language_code'] ?? 'en',
-                ],
-            ];
+            // Keywords endpoints
+            'keywords_for_keywords' => '/keywords_data/google_ads/keywords_for_keywords/task_post',
+            'keywords_for_site' => '/keywords_data/google_ads/keywords_for_site/task_post',
+            'keyword_suggestions' => '/keywords_data/google_ads/suggestions/task_post',
             
-            $response = $client->request('POST', $api_url . '/serp/google/organic/live/regular', [
-                'auth' => [
-                    $auth['login'],
-                    $auth['password'],
-                ],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => $payload,
-            ]);
+            // Backlinks endpoints
+            'backlinks_overview' => '/backlinks/overview/task_post',
+            'backlinks_summary' => '/backlinks/summary/task_post',
+            'referring_domains' => '/backlinks/referring_domains/task_post',
             
-            $result = json_decode($response->getBody()->getContents(), true);
+            // Domain Analytics endpoints
+            'domain_rank_overview' => '/domain_analytics/google/overview/task_post',
+            'competitors_domain' => '/domain_analytics/google/competitors/task_post',
             
-            if (!$result || !isset($result['tasks']) || !isset($result['tasks'][0]['result'])) {
-                throw new \Exception(__('Invalid response from DataForSEO API', 'ryvr'));
+            // On-Page endpoints
+            'page_screenshot' => '/on_page/screenshot/task_post',
+            'raw_html' => '/on_page/raw_html/task_post',
+            'page_insights' => '/on_page/page_insights/task_post',
+            
+            // Trends endpoints
+            'google_trends_explore' => '/dataforseo_trends/google_trends/explore/task_post',
+            
+            // Business Data endpoints
+            'business_listings' => '/business_data/google/my_business/find/task_post',
+            
+            // Content Analysis endpoints
+            'content_analysis_summary' => '/content_analysis/summary/task_post'
+        ];
+        
+        return $endpoint_map[$action_id] ?? throw new \InvalidArgumentException("No endpoint mapping for action: {$action_id}");
+    }
+    
+    /**
+     * Build task payload.
+     *
+     * @param string $action_id
+     * @param array $params
+     * @return array
+     */
+    private function build_task_payload(string $action_id, array $params): array
+    {
+        $payload = [];
+        
+        // Add all parameters from the request
+        foreach ($params as $key => $value) {
+            if ($value !== null && $value !== '') {
+                $payload[$key] = $value;
             }
-            
-            $organic_results = [];
-            
-            if (isset($result['tasks'][0]['result'][0]['items'])) {
-                foreach ($result['tasks'][0]['result'][0]['items'] as $item) {
-                    if ($item['type'] === 'organic') {
-                        $organic_results[] = [
-                            'position' => $item['rank_absolute'] ?? 0,
-                            'title' => $item['title'] ?? '',
-                            'url' => $item['url'] ?? '',
-                            'description' => $item['description'] ?? '',
-                            'domain' => $item['domain'] ?? '',
-                        ];
-                    }
+        }
+        
+        // Action-specific payload adjustments
+        switch ($action_id) {
+            case 'keywords_for_keywords':
+            case 'keyword_suggestions':
+                if (isset($params['keywords']) && is_string($params['keywords'])) {
+                    $payload['keywords'] = explode(',', $params['keywords']);
                 }
-            }
-            
-            return [
-                'keyword' => $params['keyword'] ?? '',
-                'total_results_count' => $result['tasks'][0]['result'][0]['total_count'] ?? 0,
-                'organic_results' => $organic_results,
-            ];
-        } catch (GuzzleException $e) {
-            $this->log(
-                'Failed to perform SERP analysis with DataForSEO: ' . $e->getMessage(),
-                [
-                    'error' => $e->getMessage(),
-                    'params' => $params,
-                ],
-                'error'
-            );
-            
-            throw new \Exception(
-                sprintf(__('Failed to perform SERP analysis: %s', 'ryvr'), $e->getMessage())
-            );
+                break;
         }
+        
+        return $payload;
     }
     
     /**
-     * Perform competitor research.
+     * Make HTTP request to DataForSEO API.
      *
-     * @param array $params Action parameters.
-     * @param array $auth   Authentication credentials.
-     *
-     * @return array Result of the action execution.
-     *
-     * @throws \Exception If the API request fails.
-     *
-     * @since 1.0.0
+     * @param string $method
+     * @param string $endpoint
+     * @param array $data
+     * @return array
      */
-    private function competitor_research(array $params, array $auth): array
+    private function make_request(string $method, string $endpoint, array $data = []): array
     {
+        $url = self::API_URL . $endpoint;
+        
+        $headers = [
+            'Authorization' => 'Basic ' . base64_encode($this->auth['login'] . ':' . $this->auth['password']),
+            'Content-Type' => 'application/json',
+            'User-Agent' => 'Ryvr/1.0'
+        ];
+
+        $request = $this->requestFactory->createRequest($method, $url);
+        
+        foreach ($headers as $name => $value) {
+            $request = $request->withHeader($name, $value);
+        }
+
+        if (!empty($data)) {
+            $request = $request->withBody(
+                $this->streamFactory->createStream(json_encode($data))
+            );
+        }
+
         try {
-            $client = new Client();
-            $api_url = $this->getApiUrl($auth);
+            $response = $this->httpClient->sendRequest($request);
+            $body = $response->getBody()->getContents();
             
-            $payload = [
-                [
-                    'target' => $params['domain'] ?? '',
-                    'location_code' => $params['location_code'] ?? '2840',
-                    'language_code' => $params['language_code'] ?? 'en',
-                    'limit' => 10,
-                ],
-            ];
-            
-            $response = $client->request('POST', $api_url . '/domain_analytics/google/organic_competitors/live', [
-                'auth' => [
-                    $auth['login'],
-                    $auth['password'],
-                ],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => $payload,
-            ]);
-            
-            $result = json_decode($response->getBody()->getContents(), true);
-            
-            if (!$result || !isset($result['tasks']) || !isset($result['tasks'][0]['result'])) {
-                throw new \Exception(__('Invalid response from DataForSEO API', 'ryvr'));
+            if ($response->getStatusCode() >= 400) {
+                throw new \Exception("DataForSEO API error: {$body}");
             }
             
-            $competitors = [];
+            return json_decode($body, true) ?: [];
             
-            if (isset($result['tasks'][0]['result'][0]['items'])) {
-                foreach ($result['tasks'][0]['result'][0]['items'] as $item) {
-                    $competitors[] = [
-                        'domain' => $item['domain'] ?? '',
-                        'intersections' => $item['intersections'] ?? 0,
-                        'common_keywords' => $item['common_keywords'] ?? 0,
-                        'se_traffic' => $item['se_traffic'] ?? 0,
-                        'se_keywords' => $item['se_keywords'] ?? 0,
-                    ];
-                }
-            }
-            
-            return [
-                'domain' => $params['domain'] ?? '',
-                'competitors' => $competitors,
-            ];
-        } catch (GuzzleException $e) {
-            $this->log(
-                'Failed to perform competitor research with DataForSEO: ' . $e->getMessage(),
-                [
-                    'error' => $e->getMessage(),
-                    'params' => $params,
-                ],
-                'error'
-            );
-            
-            throw new \Exception(
-                sprintf(__('Failed to perform competitor research: %s', 'ryvr'), $e->getMessage())
-            );
+        } catch (\Exception $e) {
+            throw new \Exception("DataForSEO connector error: " . $e->getMessage());
         }
     }
 } 
