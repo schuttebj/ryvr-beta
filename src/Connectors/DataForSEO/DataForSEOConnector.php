@@ -148,7 +148,18 @@ class DataForSEOConnector extends AbstractConnector
      */
     public function validate_auth(array $credentials): bool
     {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            try {
+                error_log('Ryvr: DataForSEO validate_auth called with credentials: ' . print_r($credentials, true));
+            } catch (\Exception $e) {
+                error_log('Ryvr: DataForSEO debug logging error: ' . $e->getMessage());
+            }
+        }
+        
         if (empty($credentials['login']) || empty($credentials['password'])) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: DataForSEO validation failed - missing login or password');
+            }
             return false;
         }
         
@@ -156,7 +167,19 @@ class DataForSEOConnector extends AbstractConnector
             $client = $this->getClient();
             $api_url = $this->getApiUrl($credentials);
             
-            $response = $client->request('GET', $api_url . '/merchant/amazon/products', [
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                try {
+                    error_log('Ryvr: DataForSEO making request to: ' . $api_url . '/user');
+                    error_log('Ryvr: DataForSEO login: ' . $credentials['login']);
+                    error_log('Ryvr: DataForSEO password length: ' . strlen($credentials['password']));
+                    error_log('Ryvr: DataForSEO use_sandbox: ' . (!empty($credentials['use_sandbox']) ? 'true' : 'false'));
+                } catch (\Exception $e) {
+                    error_log('Ryvr: DataForSEO debug logging error: ' . $e->getMessage());
+                }
+            }
+            
+            // Use a simpler endpoint for validation - just check user info
+            $response = $client->request('GET', $api_url . '/user', [
                 'auth' => [
                     $credentials['login'],
                     $credentials['password'],
@@ -164,15 +187,68 @@ class DataForSEOConnector extends AbstractConnector
                 'headers' => [
                     'Content-Type' => 'application/json',
                 ],
+                'timeout' => 30,
             ]);
             
-            return $response->getStatusCode() === 200;
-        } catch (GuzzleException $e) {
-            $this->log(
-                'Failed to validate DataForSEO credentials: ' . $e->getMessage(),
-                ['error' => $e->getMessage()],
-                'error'
-            );
+            $status_code = $response->getStatusCode();
+            $body = $response->getBody()->getContents();
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                try {
+                    error_log('Ryvr: DataForSEO response status: ' . $status_code);
+                    error_log('Ryvr: DataForSEO response body (first 200 chars): ' . substr($body, 0, 200));
+                } catch (\Exception $e) {
+                    error_log('Ryvr: DataForSEO debug logging error: ' . $e->getMessage());
+                }
+            }
+            
+            $success = $status_code === 200;
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: DataForSEO validation result: ' . ($success ? 'SUCCESS' : 'FAILED'));
+            }
+            
+            return $success;
+            
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            $status_code = $e->getResponse() ? $e->getResponse()->getStatusCode() : 'unknown';
+            $response_body = $e->getResponse() ? $e->getResponse()->getBody()->getContents() : 'no response';
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                try {
+                    error_log('Ryvr: DataForSEO ClientException - Status: ' . $status_code);
+                    error_log('Ryvr: DataForSEO ClientException - Response: ' . $response_body);
+                    error_log('Ryvr: DataForSEO ClientException - Message: ' . $e->getMessage());
+                } catch (\Exception $debug_e) {
+                    error_log('Ryvr: DataForSEO debug logging error: ' . $debug_e->getMessage());
+                }
+            }
+            
+            return false;
+            
+        } catch (\GuzzleHttp\Exception\ServerException $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: DataForSEO ServerException: ' . $e->getMessage());
+            }
+            
+            return false;
+            
+        } catch (\GuzzleHttp\Exception\ConnectException $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Ryvr: DataForSEO ConnectException: ' . $e->getMessage());
+            }
+            
+            return false;
+            
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                try {
+                    error_log('Ryvr: DataForSEO general exception: ' . $e->getMessage());
+                    error_log('Ryvr: DataForSEO exception trace: ' . $e->getTraceAsString());
+                } catch (\Exception $debug_e) {
+                    error_log('Ryvr: DataForSEO debug logging error: ' . $debug_e->getMessage());
+                }
+            }
             
             return false;
         }
