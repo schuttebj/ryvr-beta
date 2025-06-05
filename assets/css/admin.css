@@ -214,6 +214,23 @@
     background: var(--ryvr-white);
     position: relative;
     overflow: hidden;
+    min-height: 600px;
+}
+
+/* Connections SVG */
+.ryvr-connections-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.ryvr-connections-svg .connection-line {
+    pointer-events: stroke;
+    cursor: pointer;
 }
 
 .ryvr-canvas-grid {

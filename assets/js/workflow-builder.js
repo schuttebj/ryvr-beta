@@ -26,6 +26,41 @@ class RyvrWorkflowBuilder {
         this.setupEventListeners();
         this.loadConnectors();
         this.loadAvailableModels();
+        
+        // Test SVG rendering after a short delay
+        setTimeout(() => {
+            this.testSVGRendering();
+        }, 1000);
+    }
+    
+    testSVGRendering() {
+        console.log('Testing SVG rendering...');
+        
+        if (!this.connectionsSvg) {
+            console.error('SVG element not found!');
+            return;
+        }
+        
+        // Create a test line
+        const testLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        testLine.setAttribute('d', 'M 50 50 L 200 150');
+        testLine.setAttribute('stroke', '#ff0000');
+        testLine.setAttribute('stroke-width', '5');
+        testLine.setAttribute('fill', 'none');
+        testLine.setAttribute('id', 'test-line');
+        
+        this.connectionsSvg.appendChild(testLine);
+        
+        console.log('Test line added to SVG:', testLine);
+        console.log('SVG children count:', this.connectionsSvg.children.length);
+        
+        // Remove test line after 3 seconds
+        setTimeout(() => {
+            if (testLine.parentNode) {
+                testLine.remove();
+                console.log('Test line removed');
+            }
+        }, 3000);
     }
     
     setupContainer() {
@@ -44,7 +79,7 @@ class RyvrWorkflowBuilder {
                             <marker id="arrowhead" markerWidth="10" markerHeight="7" 
                                     refX="10" refY="3.5" orient="auto">
                                 <polygon points="0 0, 10 3.5, 0 7" 
-                                         fill="var(--ryvr-accent)" />
+                                         fill="#3b82f6" />
                             </marker>
                         </defs>
                     </svg>
@@ -68,6 +103,16 @@ class RyvrWorkflowBuilder {
         this.connectionsSvg = this.container.querySelector('.ryvr-connections-svg');
         this.inspectorElement = this.container.querySelector('.ryvr-inspector');
         this.inspectorContent = this.container.querySelector('.ryvr-inspector-content');
+        
+        // Debug SVG setup
+        console.log('SVG element found:', this.connectionsSvg);
+        if (this.connectionsSvg) {
+            console.log('SVG dimensions:', {
+                width: this.connectionsSvg.clientWidth,
+                height: this.connectionsSvg.clientHeight,
+                boundingRect: this.connectionsSvg.getBoundingClientRect()
+            });
+        }
     }
     
     setupEventListeners() {
@@ -1331,6 +1376,13 @@ class RyvrWorkflowBuilder {
         
         const line = this.createConnectionLine(startX, startY, endX, endY, false, connectionId);
         this.connectionsSvg.appendChild(line);
+        
+        console.log('Connection line created and added to SVG:', {
+            connectionId,
+            coordinates: { startX, startY, endX, endY },
+            svgElement: this.connectionsSvg,
+            lineElement: line
+        });
     }
     
     createConnectionLine(startX, startY, endX, endY, isTemp = false, connectionId = null) {
@@ -1345,10 +1397,11 @@ class RyvrWorkflowBuilder {
         const pathData = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
         
         line.setAttribute('d', pathData);
-        line.setAttribute('stroke', isTemp ? '#ccc' : 'var(--ryvr-accent)');
-        line.setAttribute('stroke-width', '2');
+        line.setAttribute('stroke', isTemp ? '#cccccc' : '#3b82f6');
+        line.setAttribute('stroke-width', '3');
         line.setAttribute('fill', 'none');
         line.setAttribute('marker-end', 'url(#arrowhead)');
+        line.setAttribute('opacity', isTemp ? '0.5' : '1');
         
         if (connectionId) {
             line.setAttribute('data-connection-id', connectionId);
