@@ -41,26 +41,45 @@ class RyvrWorkflowBuilder {
             return;
         }
         
-        // Create a test line
-        const testLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        testLine.setAttribute('d', 'M 50 50 L 200 150');
+        console.log('SVG element details:', {
+            element: this.connectionsSvg,
+            width: this.connectionsSvg.getAttribute('width'),
+            height: this.connectionsSvg.getAttribute('height'),
+            clientWidth: this.connectionsSvg.clientWidth,
+            clientHeight: this.connectionsSvg.clientHeight,
+            style: this.connectionsSvg.style.cssText
+        });
+        
+        // Create multiple test elements
+        const testLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        testLine.setAttribute('x1', '100');
+        testLine.setAttribute('y1', '100');
+        testLine.setAttribute('x2', '300');
+        testLine.setAttribute('y2', '200');
         testLine.setAttribute('stroke', '#ff0000');
         testLine.setAttribute('stroke-width', '5');
-        testLine.setAttribute('fill', 'none');
         testLine.setAttribute('id', 'test-line');
         
+        const testCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        testCircle.setAttribute('cx', '400');
+        testCircle.setAttribute('cy', '150');
+        testCircle.setAttribute('r', '20');
+        testCircle.setAttribute('fill', '#00ff00');
+        testCircle.setAttribute('id', 'test-circle');
+        
         this.connectionsSvg.appendChild(testLine);
+        this.connectionsSvg.appendChild(testCircle);
         
-        console.log('Test line added to SVG:', testLine);
+        console.log('Test elements added to SVG:', { testLine, testCircle });
         console.log('SVG children count:', this.connectionsSvg.children.length);
+        console.log('SVG innerHTML:', this.connectionsSvg.innerHTML);
         
-        // Remove test line after 3 seconds
+        // Remove test elements after 5 seconds
         setTimeout(() => {
-            if (testLine.parentNode) {
-                testLine.remove();
-                console.log('Test line removed');
-            }
-        }, 3000);
+            if (testLine.parentNode) testLine.remove();
+            if (testCircle.parentNode) testCircle.remove();
+            console.log('Test elements removed');
+        }, 5000);
     }
     
     setupContainer() {
@@ -74,7 +93,8 @@ class RyvrWorkflowBuilder {
                 <div class="ryvr-canvas">
                     <div class="ryvr-canvas-grid"></div>
                     <div class="ryvr-nodes-container"></div>
-                    <svg class="ryvr-connections-svg">
+                    <svg class="ryvr-connections-svg" width="100%" height="100%" 
+                         style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1;">
                         <defs>
                             <marker id="arrowhead" markerWidth="10" markerHeight="7" 
                                     refX="10" refY="3.5" orient="auto">
@@ -106,11 +126,19 @@ class RyvrWorkflowBuilder {
         
         // Debug SVG setup
         console.log('SVG element found:', this.connectionsSvg);
+        console.log('Canvas element:', this.canvasElement);
         if (this.connectionsSvg) {
             console.log('SVG dimensions:', {
                 width: this.connectionsSvg.clientWidth,
                 height: this.connectionsSvg.clientHeight,
                 boundingRect: this.connectionsSvg.getBoundingClientRect()
+            });
+        }
+        if (this.canvasElement) {
+            console.log('Canvas dimensions:', {
+                width: this.canvasElement.clientWidth,
+                height: this.canvasElement.clientHeight,
+                boundingRect: this.canvasElement.getBoundingClientRect()
             });
         }
     }
@@ -1388,20 +1416,24 @@ class RyvrWorkflowBuilder {
     createConnectionLine(startX, startY, endX, endY, isTemp = false, connectionId = null) {
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         
-        // Create curved path
-        const controlX1 = startX + (endX - startX) * 0.5;
+        // Create curved path with better control points
+        const dx = endX - startX;
+        const controlX1 = startX + Math.max(50, Math.abs(dx) * 0.5);
         const controlY1 = startY;
-        const controlX2 = startX + (endX - startX) * 0.5;
+        const controlX2 = endX - Math.max(50, Math.abs(dx) * 0.5);
         const controlY2 = endY;
         
         const pathData = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
         
+        console.log('Creating path with data:', pathData);
+        
         line.setAttribute('d', pathData);
-        line.setAttribute('stroke', isTemp ? '#cccccc' : '#3b82f6');
-        line.setAttribute('stroke-width', '3');
+        line.setAttribute('stroke', isTemp ? '#ff6b6b' : '#3b82f6');
+        line.setAttribute('stroke-width', isTemp ? '2' : '3');
         line.setAttribute('fill', 'none');
         line.setAttribute('marker-end', 'url(#arrowhead)');
-        line.setAttribute('opacity', isTemp ? '0.5' : '1');
+        line.setAttribute('opacity', '1');
+        line.style.pointerEvents = connectionId ? 'stroke' : 'none';
         
         if (connectionId) {
             line.setAttribute('data-connection-id', connectionId);
@@ -1416,6 +1448,7 @@ class RyvrWorkflowBuilder {
             line.classList.add('temp-connection');
         }
         
+        console.log('Created line element:', line);
         return line;
     }
     
