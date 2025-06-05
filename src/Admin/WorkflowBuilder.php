@@ -476,19 +476,41 @@ class WorkflowBuilder
             wp_die(__('You do not have permission to access this endpoint.', 'ryvr'));
         }
 
-        // Always return default models for now until OpenAI connector is properly configured
-        $default_models = [
-            ['id' => 'gpt-4o', 'name' => 'GPT-4o', 'category' => 'chat'],
-            ['id' => 'gpt-4o-mini', 'name' => 'GPT-4o Mini', 'category' => 'chat'],
-            ['id' => 'gpt-4-turbo', 'name' => 'GPT-4 Turbo', 'category' => 'chat'],
-            ['id' => 'gpt-3.5-turbo', 'name' => 'GPT-3.5 Turbo', 'category' => 'chat'],
-            ['id' => 'gpt-4', 'name' => 'GPT-4', 'category' => 'chat'],
-            ['id' => 'text-davinci-003', 'name' => 'Text Davinci 003', 'category' => 'completion'],
-        ];
-        
         try {
-            // Future: Try to get live models if OpenAI is configured
-            // For now, just return the default models
+            // Try to get models from OpenAI connector
+            global $ryvr_connector_manager;
+            
+            if ($ryvr_connector_manager) {
+                $connectors = $ryvr_connector_manager->get_connectors();
+                
+                if (isset($connectors['openai'])) {
+                    $openai_connector = $connectors['openai'];
+                    $models = $openai_connector->get_available_models();
+                    
+                    if (!empty($models)) {
+                        wp_send_json_success($models);
+                        return;
+                    }
+                }
+            }
+
+            // Fallback to default models
+            $default_models = [
+                ['id' => 'gpt-4o', 'name' => 'GPT-4o', 'category' => 'chat'],
+                ['id' => 'gpt-4o-mini', 'name' => 'GPT-4o Mini', 'category' => 'chat'],
+                ['id' => 'gpt-4-turbo', 'name' => 'GPT-4 Turbo', 'category' => 'chat'],
+                ['id' => 'gpt-3.5-turbo', 'name' => 'GPT-3.5 Turbo', 'category' => 'chat'],
+                ['id' => 'gpt-4', 'name' => 'GPT-4', 'category' => 'chat'],
+                ['id' => 'text-embedding-3-large', 'name' => 'Text Embedding 3 Large', 'category' => 'embeddings'],
+                ['id' => 'text-embedding-3-small', 'name' => 'Text Embedding 3 Small', 'category' => 'embeddings'],
+                ['id' => 'dall-e-3', 'name' => 'DALL-E 3', 'category' => 'image'],
+                ['id' => 'dall-e-2', 'name' => 'DALL-E 2', 'category' => 'image'],
+                ['id' => 'whisper-1', 'name' => 'Whisper', 'category' => 'audio'],
+                ['id' => 'tts-1', 'name' => 'TTS', 'category' => 'audio'],
+                ['id' => 'tts-1-hd', 'name' => 'TTS HD', 'category' => 'audio'],
+                ['id' => 'text-davinci-003', 'name' => 'Text Davinci 003', 'category' => 'completion'],
+            ];
+            
             wp_send_json_success($default_models);
 
         } catch (\Exception $e) {
@@ -496,7 +518,23 @@ class WorkflowBuilder
                 error_log('Ryvr: Error loading OpenAI models: ' . $e->getMessage());
             }
             
-            // Always fallback to default models
+            // Fallback to default models on error
+            $default_models = [
+                ['id' => 'gpt-4o', 'name' => 'GPT-4o', 'category' => 'chat'],
+                ['id' => 'gpt-4o-mini', 'name' => 'GPT-4o Mini', 'category' => 'chat'],
+                ['id' => 'gpt-4-turbo', 'name' => 'GPT-4 Turbo', 'category' => 'chat'],
+                ['id' => 'gpt-3.5-turbo', 'name' => 'GPT-3.5 Turbo', 'category' => 'chat'],
+                ['id' => 'gpt-4', 'name' => 'GPT-4', 'category' => 'chat'],
+                ['id' => 'text-embedding-3-large', 'name' => 'Text Embedding 3 Large', 'category' => 'embeddings'],
+                ['id' => 'text-embedding-3-small', 'name' => 'Text Embedding 3 Small', 'category' => 'embeddings'],
+                ['id' => 'dall-e-3', 'name' => 'DALL-E 3', 'category' => 'image'],
+                ['id' => 'dall-e-2', 'name' => 'DALL-E 2', 'category' => 'image'],
+                ['id' => 'whisper-1', 'name' => 'Whisper', 'category' => 'audio'],
+                ['id' => 'tts-1', 'name' => 'TTS', 'category' => 'audio'],
+                ['id' => 'tts-1-hd', 'name' => 'TTS HD', 'category' => 'audio'],
+                ['id' => 'text-davinci-003', 'name' => 'Text Davinci 003', 'category' => 'completion'],
+            ];
+            
             wp_send_json_success($default_models);
         }
     }

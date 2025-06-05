@@ -164,6 +164,9 @@ class RyvrWorkflowBuilder {
     renderConnectorsList() {
         const connectorsContainer = this.sidebarElement.querySelector('.ryvr-connectors-list');
         
+        // Add data processing tools first
+        const dataProcessingGroup = this.createDataProcessingGroup();
+        
         // Group connectors by category
         const categories = {};
         Object.values(this.connectors).forEach(connector => {
@@ -175,6 +178,9 @@ class RyvrWorkflowBuilder {
         });
         
         connectorsContainer.innerHTML = '';
+        
+        // Add data processing tools at the top
+        connectorsContainer.appendChild(dataProcessingGroup);
         
         Object.entries(categories).forEach(([category, connectors]) => {
             const groupElement = document.createElement('div');
@@ -192,6 +198,90 @@ class RyvrWorkflowBuilder {
             
             connectorsContainer.appendChild(groupElement);
         });
+    }
+
+    createDataProcessingGroup() {
+        const groupElement = document.createElement('div');
+        groupElement.className = 'ryvr-connector-group';
+        groupElement.innerHTML = `<h4>Data Processing</h4>`;
+        
+        const dataProcessingTasks = [
+            {
+                id: 'data_filter',
+                name: 'Filter Data',
+                description: 'Filter data based on conditions',
+                icon: '🔍',
+                category: 'data_processing'
+            },
+            {
+                id: 'data_transform',
+                name: 'Transform Data',
+                description: 'Transform and modify data fields',
+                icon: '🔄',
+                category: 'data_processing'
+            },
+            {
+                id: 'data_mapper',
+                name: 'Map Fields',
+                description: 'Map data fields between formats',
+                icon: '🗺️',
+                category: 'data_processing'
+            },
+            {
+                id: 'data_validator',
+                name: 'Validate Data',
+                description: 'Validate data against rules',
+                icon: '✅',
+                category: 'data_processing'
+            },
+            {
+                id: 'decision_node',
+                name: 'Decision',
+                description: 'Make decisions based on conditions',
+                icon: '🔀',
+                category: 'flow_control'
+            },
+            {
+                id: 'delay_node',
+                name: 'Delay',
+                description: 'Add delays between tasks',
+                icon: '⏱️',
+                category: 'flow_control'
+            }
+        ];
+        
+        dataProcessingTasks.forEach(task => {
+            const taskCard = this.createDataProcessingTaskCard(task);
+            groupElement.appendChild(taskCard);
+        });
+        
+        return groupElement;
+    }
+
+    createDataProcessingTaskCard(task) {
+        const card = document.createElement('div');
+        card.className = 'ryvr-task-card ryvr-data-processing-task';
+        card.setAttribute('draggable', 'true');
+        card.setAttribute('data-task-type', 'data_processing');
+        card.setAttribute('data-task-id', task.id);
+        
+        card.innerHTML = `
+            <div class="ryvr-task-icon">${task.icon}</div>
+            <div class="ryvr-task-info">
+                <div class="ryvr-task-name">${task.name}</div>
+                <div class="ryvr-task-description">${task.description}</div>
+            </div>
+        `;
+        
+        card.addEventListener('dragstart', (e) => {
+            this.draggedElement = {
+                type: 'data_processing',
+                taskId: task.id,
+                task: task
+            };
+        });
+        
+        return card;
     }
     
     createTaskCard(connector, actionId, action) {
@@ -241,7 +331,12 @@ class RyvrWorkflowBuilder {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         
-        this.createNode(this.draggedElement.connector, this.draggedElement.action, x, y);
+        if (this.draggedElement.type === 'data_processing') {
+            this.createDataProcessingNode(this.draggedElement.taskId, this.draggedElement.task, x, y);
+        } else {
+            this.createNode(this.draggedElement.connector, this.draggedElement.action, x, y);
+        }
+        
         this.draggedElement = null;
     }
     
@@ -262,6 +357,53 @@ class RyvrWorkflowBuilder {
         
         this.nodes.set(nodeId, nodeData);
         this.renderNode(nodeData);
+    }
+
+    createDataProcessingNode(taskId, task, x, y) {
+        const nodeId = `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        const nodeData = {
+            id: nodeId,
+            type: 'data_processing',
+            taskId,
+            taskName: task.name,
+            x,
+            y,
+            parameters: this.getDefaultParametersForTask(taskId),
+            config: {}
+        };
+        
+        this.nodes.set(nodeId, nodeData);
+        this.renderDataProcessingNode(nodeData);
+    }
+
+    getDefaultParametersForTask(taskId) {
+        const defaults = {
+            'data_filter': {
+                conditions: [],
+                operator: 'and'
+            },
+            'data_transform': {
+                transformations: []
+            },
+            'data_mapper': {
+                mappings: []
+            },
+            'data_validator': {
+                rules: []
+            },
+            'decision_node': {
+                condition: '',
+                true_path: '',
+                false_path: ''
+            },
+            'delay_node': {
+                duration: 1000,
+                unit: 'milliseconds'
+            }
+        };
+        
+        return defaults[taskId] || {};
     }
     
     renderNode(nodeData) {
@@ -301,6 +443,80 @@ class RyvrWorkflowBuilder {
         this.makeNodeDraggable(nodeElement, nodeData);
         
         this.nodesContainer.appendChild(nodeElement);
+    }
+
+    renderDataProcessingNode(nodeData) {
+        const taskColors = {
+            'data_filter': '#3b82f6',
+            'data_transform': '#8b5cf6',
+            'data_mapper': '#10b981',
+            'data_validator': '#f59e0b',
+            'decision_node': '#ef4444',
+            'delay_node': '#6b7280'
+        };
+        
+        const nodeElement = document.createElement('div');
+        nodeElement.className = 'ryvr-node ryvr-data-processing-node';
+        nodeElement.setAttribute('data-node-id', nodeData.id);
+        nodeElement.style.left = `${nodeData.x}px`;
+        nodeElement.style.top = `${nodeData.y}px`;
+        
+        const taskIcon = this.getTaskIcon(nodeData.taskId);
+        const taskColor = taskColors[nodeData.taskId] || '#6b7280';
+        
+        nodeElement.innerHTML = `
+            <div class="node-header">
+                <div class="node-icon" style="background: ${taskColor}">${taskIcon}</div>
+                <div class="node-title">${nodeData.taskName}</div>
+                <div class="node-status"></div>
+            </div>
+            <div class="node-description">${this.getTaskDescription(nodeData.taskId)}</div>
+            <div class="ryvr-handle source" data-handle-type="source" data-node-id="${nodeData.id}">
+                <div class="handle-dot"></div>
+            </div>
+            <div class="ryvr-handle target" data-handle-type="target" data-node-id="${nodeData.id}">
+                <div class="handle-dot"></div>
+            </div>
+        `;
+        
+        nodeElement.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.selectNode(nodeData.id);
+        });
+        
+        // Handle connection events
+        this.setupConnectionHandles(nodeElement);
+        
+        // Make node draggable
+        this.makeNodeDraggable(nodeElement, nodeData);
+        
+        this.nodesContainer.appendChild(nodeElement);
+    }
+
+    getTaskIcon(taskId) {
+        const icons = {
+            'data_filter': '🔍',
+            'data_transform': '🔄',
+            'data_mapper': '🗺️',
+            'data_validator': '✅',
+            'decision_node': '🔀',
+            'delay_node': '⏱️'
+        };
+        
+        return icons[taskId] || '⚙️';
+    }
+
+    getTaskDescription(taskId) {
+        const descriptions = {
+            'data_filter': 'Filter data based on conditions',
+            'data_transform': 'Transform and modify data fields',
+            'data_mapper': 'Map data fields between formats',
+            'data_validator': 'Validate data against rules',
+            'decision_node': 'Make decisions based on conditions',
+            'delay_node': 'Add delays between tasks'
+        };
+        
+        return descriptions[taskId] || 'Data processing task';
     }
     
     makeNodeDraggable(element, nodeData) {
@@ -386,18 +602,295 @@ class RyvrWorkflowBuilder {
     
     showNodeInspector(nodeId) {
         const nodeData = this.nodes.get(nodeId);
-        const connector = this.connectors[nodeData.connectorId];
-        const action = connector.actions[nodeData.actionId];
         
+        if (nodeData.type === 'data_processing') {
+            this.showDataProcessingInspector(nodeData);
+        } else {
+            const connector = this.connectors[nodeData.connectorId];
+            const action = connector.actions[nodeData.actionId];
+            
+            this.inspectorContent.innerHTML = `
+                <h3>${action.name}</h3>
+                <div class="ryvr-inspector-form">
+                    ${this.renderParameterForm(action, nodeData.parameters)}
+                    ${this.renderJsonSchemaSection(nodeData)}
+                </div>
+            `;
+            
+            this.bindParameterFormEvents(nodeId);
+        }
+    }
+
+    showDataProcessingInspector(nodeData) {
         this.inspectorContent.innerHTML = `
-            <h3>${action.name}</h3>
+            <h3>${nodeData.taskName}</h3>
             <div class="ryvr-inspector-form">
-                ${this.renderParameterForm(action, nodeData.parameters)}
-                ${this.renderJsonSchemaSection(nodeData)}
+                ${this.renderDataProcessingForm(nodeData)}
             </div>
         `;
         
-        this.bindParameterFormEvents(nodeId);
+        this.bindDataProcessingFormEvents(nodeData.id);
+    }
+
+    renderDataProcessingForm(nodeData) {
+        switch (nodeData.taskId) {
+            case 'data_filter':
+                return this.renderFilterForm(nodeData);
+            case 'data_transform':
+                return this.renderTransformForm(nodeData);
+            case 'data_mapper':
+                return this.renderMapperForm(nodeData);
+            case 'data_validator':
+                return this.renderValidatorForm(nodeData);
+            case 'decision_node':
+                return this.renderDecisionForm(nodeData);
+            case 'delay_node':
+                return this.renderDelayForm(nodeData);
+            default:
+                return '<p>Configuration form not available for this task type.</p>';
+        }
+    }
+
+    renderFilterForm(nodeData) {
+        const conditions = nodeData.parameters.conditions || [];
+        const operator = nodeData.parameters.operator || 'and';
+        
+        let conditionsHtml = conditions.map((condition, index) => `
+            <div class="filter-condition" data-index="${index}">
+                <select name="field">
+                    <option value="${condition.field || ''}">${condition.field || 'Select field'}</option>
+                </select>
+                <select name="operator">
+                    <option value="equals" ${condition.operator === 'equals' ? 'selected' : ''}>Equals</option>
+                    <option value="not_equals" ${condition.operator === 'not_equals' ? 'selected' : ''}>Not Equals</option>
+                    <option value="contains" ${condition.operator === 'contains' ? 'selected' : ''}>Contains</option>
+                    <option value="not_contains" ${condition.operator === 'not_contains' ? 'selected' : ''}>Not Contains</option>
+                    <option value="greater_than" ${condition.operator === 'greater_than' ? 'selected' : ''}>Greater Than</option>
+                    <option value="less_than" ${condition.operator === 'less_than' ? 'selected' : ''}>Less Than</option>
+                </select>
+                <input type="text" name="value" value="${condition.value || ''}" placeholder="Value">
+                <button type="button" class="remove-condition" data-index="${index}">Remove</button>
+            </div>
+        `).join('');
+        
+        return `
+            <h4>Filter Conditions</h4>
+            <div class="filter-conditions">
+                ${conditionsHtml}
+            </div>
+            <button type="button" class="add-condition">Add Condition</button>
+            
+            <h4>Operator</h4>
+            <select name="operator">
+                <option value="and" ${operator === 'and' ? 'selected' : ''}>AND (all conditions must match)</option>
+                <option value="or" ${operator === 'or' ? 'selected' : ''}>OR (any condition must match)</option>
+            </select>
+        `;
+    }
+
+    renderTransformForm(nodeData) {
+        const transformations = nodeData.parameters.transformations || [];
+        
+        let transformationsHtml = transformations.map((transform, index) => `
+            <div class="transformation" data-index="${index}">
+                <select name="field">
+                    <option value="${transform.field || ''}">${transform.field || 'Select field'}</option>
+                </select>
+                <select name="function">
+                    <option value="uppercase" ${transform.function === 'uppercase' ? 'selected' : ''}>Uppercase</option>
+                    <option value="lowercase" ${transform.function === 'lowercase' ? 'selected' : ''}>Lowercase</option>
+                    <option value="trim" ${transform.function === 'trim' ? 'selected' : ''}>Trim</option>
+                    <option value="replace" ${transform.function === 'replace' ? 'selected' : ''}>Replace</option>
+                    <option value="format_date" ${transform.function === 'format_date' ? 'selected' : ''}>Format Date</option>
+                    <option value="number_format" ${transform.function === 'number_format' ? 'selected' : ''}>Number Format</option>
+                </select>
+                <input type="text" name="params" value="${transform.params || ''}" placeholder="Function parameters (JSON)">
+                <button type="button" class="remove-transformation" data-index="${index}">Remove</button>
+            </div>
+        `).join('');
+        
+        return `
+            <h4>Transformations</h4>
+            <div class="transformations">
+                ${transformationsHtml}
+            </div>
+            <button type="button" class="add-transformation">Add Transformation</button>
+        `;
+    }
+
+    renderMapperForm(nodeData) {
+        const mappings = nodeData.parameters.mappings || [];
+        
+        let mappingsHtml = mappings.map((mapping, index) => `
+            <div class="mapping" data-index="${index}">
+                <input type="text" name="source" value="${mapping.source || ''}" placeholder="Source field">
+                <span>→</span>
+                <input type="text" name="target" value="${mapping.target || ''}" placeholder="Target field">
+                <button type="button" class="remove-mapping" data-index="${index}">Remove</button>
+            </div>
+        `).join('');
+        
+        return `
+            <h4>Field Mappings</h4>
+            <div class="mappings">
+                ${mappingsHtml}
+            </div>
+            <button type="button" class="add-mapping">Add Mapping</button>
+        `;
+    }
+
+    renderValidatorForm(nodeData) {
+        const rules = nodeData.parameters.rules || [];
+        
+        let rulesHtml = rules.map((rule, index) => `
+            <div class="validation-rule" data-index="${index}">
+                <select name="field">
+                    <option value="${rule.field || ''}">${rule.field || 'Select field'}</option>
+                </select>
+                <select name="rule">
+                    <option value="required" ${rule.rule === 'required' ? 'selected' : ''}>Required</option>
+                    <option value="string" ${rule.rule === 'string' ? 'selected' : ''}>String</option>
+                    <option value="integer" ${rule.rule === 'integer' ? 'selected' : ''}>Integer</option>
+                    <option value="email" ${rule.rule === 'email' ? 'selected' : ''}>Email</option>
+                    <option value="url" ${rule.rule === 'url' ? 'selected' : ''}>URL</option>
+                    <option value="min_length" ${rule.rule === 'min_length' ? 'selected' : ''}>Min Length</option>
+                    <option value="max_length" ${rule.rule === 'max_length' ? 'selected' : ''}>Max Length</option>
+                    <option value="regex" ${rule.rule === 'regex' ? 'selected' : ''}>Regex</option>
+                </select>
+                <input type="text" name="params" value="${rule.params || ''}" placeholder="Rule parameters">
+                <button type="button" class="remove-rule" data-index="${index}">Remove</button>
+            </div>
+        `).join('');
+        
+        return `
+            <h4>Validation Rules</h4>
+            <div class="validation-rules">
+                ${rulesHtml}
+            </div>
+            <button type="button" class="add-rule">Add Rule</button>
+        `;
+    }
+
+    renderDecisionForm(nodeData) {
+        return `
+            <h4>Decision Logic</h4>
+            <label>Condition:</label>
+            <textarea name="condition" placeholder="Enter JavaScript condition (e.g., data.status === 'active')">${nodeData.parameters.condition || ''}</textarea>
+            
+            <label>True Path Label:</label>
+            <input type="text" name="true_path" value="${nodeData.parameters.true_path || 'Yes'}" placeholder="Label for true path">
+            
+            <label>False Path Label:</label>
+            <input type="text" name="false_path" value="${nodeData.parameters.false_path || 'No'}" placeholder="Label for false path">
+        `;
+    }
+
+    renderDelayForm(nodeData) {
+        return `
+            <h4>Delay Configuration</h4>
+            <label>Duration:</label>
+            <input type="number" name="duration" value="${nodeData.parameters.duration || 1000}" min="0">
+            
+            <label>Unit:</label>
+            <select name="unit">
+                <option value="milliseconds" ${nodeData.parameters.unit === 'milliseconds' ? 'selected' : ''}>Milliseconds</option>
+                <option value="seconds" ${nodeData.parameters.unit === 'seconds' ? 'selected' : ''}>Seconds</option>
+                <option value="minutes" ${nodeData.parameters.unit === 'minutes' ? 'selected' : ''}>Minutes</option>
+                <option value="hours" ${nodeData.parameters.unit === 'hours' ? 'selected' : ''}>Hours</option>
+            </select>
+        `;
+    }
+
+    bindDataProcessingFormEvents(nodeId) {
+        const nodeData = this.nodes.get(nodeId);
+        
+        // Add event listeners based on task type
+        switch (nodeData.taskId) {
+            case 'data_filter':
+                this.bindFilterFormEvents(nodeId);
+                break;
+            case 'data_transform':
+                this.bindTransformFormEvents(nodeId);
+                break;
+            case 'data_mapper':
+                this.bindMapperFormEvents(nodeId);
+                break;
+            case 'data_validator':
+                this.bindValidatorFormEvents(nodeId);
+                break;
+            case 'decision_node':
+                this.bindDecisionFormEvents(nodeId);
+                break;
+            case 'delay_node':
+                this.bindDelayFormEvents(nodeId);
+                break;
+        }
+    }
+
+    bindFilterFormEvents(nodeId) {
+        const addButton = this.inspectorContent.querySelector('.add-condition');
+        if (addButton) {
+            addButton.addEventListener('click', () => {
+                // Add new condition logic
+                console.log('Add condition for node:', nodeId);
+            });
+        }
+    }
+
+    bindTransformFormEvents(nodeId) {
+        const addButton = this.inspectorContent.querySelector('.add-transformation');
+        if (addButton) {
+            addButton.addEventListener('click', () => {
+                // Add new transformation logic
+                console.log('Add transformation for node:', nodeId);
+            });
+        }
+    }
+
+    bindMapperFormEvents(nodeId) {
+        const addButton = this.inspectorContent.querySelector('.add-mapping');
+        if (addButton) {
+            addButton.addEventListener('click', () => {
+                // Add new mapping logic
+                console.log('Add mapping for node:', nodeId);
+            });
+        }
+    }
+
+    bindValidatorFormEvents(nodeId) {
+        const addButton = this.inspectorContent.querySelector('.add-rule');
+        if (addButton) {
+            addButton.addEventListener('click', () => {
+                // Add new validation rule logic
+                console.log('Add validation rule for node:', nodeId);
+            });
+        }
+    }
+
+    bindDecisionFormEvents(nodeId) {
+        const inputs = this.inspectorContent.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                this.updateDataProcessingParameter(nodeId, e.target.name, e.target.value);
+            });
+        });
+    }
+
+    bindDelayFormEvents(nodeId) {
+        const inputs = this.inspectorContent.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                this.updateDataProcessingParameter(nodeId, e.target.name, e.target.value);
+            });
+        });
+    }
+
+    updateDataProcessingParameter(nodeId, paramName, value) {
+        const nodeData = this.nodes.get(nodeId);
+        if (nodeData) {
+            nodeData.parameters[paramName] = value;
+            console.log('Updated parameter:', paramName, 'to:', value, 'for node:', nodeId);
+        }
     }
     
     renderParameterForm(action, currentParams) {

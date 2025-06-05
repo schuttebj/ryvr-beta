@@ -141,6 +141,25 @@
     line-height: 1.4;
 }
 
+/* Task card layout for data processing tools */
+.ryvr-task-card .ryvr-task-info {
+    flex: 1;
+}
+
+.ryvr-task-card .ryvr-task-name {
+    font-weight: 600;
+    color: var(--ryvr-primary);
+    font-size: 14px;
+    margin: 0 0 4px 0;
+}
+
+.ryvr-task-card .ryvr-task-description {
+    color: var(--ryvr-secondary);
+    font-size: 12px;
+    margin: 0;
+    line-height: 1.4;
+}
+
 /* Connector Brand Colors */
 .ryvr-task-card[data-connector="openai"] .task-icon {
     background: #00a67e;
@@ -278,6 +297,104 @@
     font-size: 12px;
     margin: 0 0 12px 0;
     line-height: 1.4;
+}
+
+/* Data processing node specific styling */
+.ryvr-data-processing-node {
+    border-color: var(--ryvr-accent);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.ryvr-data-processing-node .node-icon {
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+/* Data processing task cards */
+.ryvr-data-processing-task {
+    border-left: 4px solid var(--ryvr-accent);
+    background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+}
+
+.ryvr-data-processing-task:hover {
+    border-left-color: var(--ryvr-primary);
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    transform: translateX(2px);
+}
+
+.ryvr-data-processing-task .ryvr-task-icon {
+    font-size: 18px;
+    margin-right: 8px;
+}
+
+/* Inspector form styles for data processing */
+.filter-condition,
+.transformation,
+.mapping,
+.validation-rule {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.filter-condition select,
+.transformation select,
+.mapping input,
+.validation-rule select,
+.validation-rule input {
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.filter-condition button,
+.transformation button,
+.mapping button,
+.validation-rule button {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.filter-condition button:hover,
+.transformation button:hover,
+.mapping button:hover,
+.validation-rule button:hover {
+    background: #dc2626;
+}
+
+.add-condition,
+.add-transformation,
+.add-mapping,
+.add-rule {
+    background: var(--ryvr-primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.add-condition:hover,
+.add-transformation:hover,
+.add-mapping:hover,
+.add-rule:hover {
+    background: var(--ryvr-primary-dark);
 }
 
 /* Connection Handles */
