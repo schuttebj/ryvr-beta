@@ -28,6 +28,7 @@ class WorkflowBuilder
         add_action('wp_ajax_ryvr_load_workflow', [$this, 'load_workflow']);
         add_action('wp_ajax_ryvr_get_connector_output_schema', [$this, 'get_connector_output_schema']);
         add_action('wp_ajax_ryvr_get_connector_input_schema', [$this, 'get_connector_input_schema']);
+        add_action('wp_ajax_ryvr_test_task', [$this, 'test_task']);
         
         // Add debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -908,5 +909,277 @@ class WorkflowBuilder
                 $fields[$field_name] = $field_type;
             }
         }
+    }
+
+    /**
+     * AJAX handler to test a task.
+     *
+     * @return void
+     */
+    public function test_task(): void
+    {
+        check_ajax_referer('ryvr_workflow_builder', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have permission to access this endpoint.', 'ryvr'));
+        }
+
+        $connector_id = sanitize_text_field($_POST['connector_id'] ?? '');
+        $action_id = sanitize_text_field($_POST['action_id'] ?? '');
+        $parameters = isset($_POST['parameters']) ? (array) $_POST['parameters'] : [];
+        $test_mode = isset($_POST['test_mode']) && $_POST['test_mode'];
+
+        if (empty($connector_id) || empty($action_id)) {
+            wp_send_json_error('Missing connector ID or action ID');
+            return;
+        }
+
+        try {
+            $connector_manager = new \Ryvr\Connectors\Manager();
+            $connector = $connector_manager->get_connector($connector_id);
+
+            if (!$connector) {
+                wp_send_json_error('Connector not found');
+                return;
+            }
+
+            $actions = $connector->get_actions();
+            if (!isset($actions[$action_id])) {
+                wp_send_json_error('Action not found');
+                return;
+            }
+
+            // In test mode, return sample data instead of actual execution
+            if ($test_mode) {
+                $sample_data = $this->generate_sample_data($connector_id, $action_id, $actions[$action_id]);
+                wp_send_json_success($sample_data);
+                return;
+            }
+
+            // For actual execution, we would need to implement the action execution
+            // For now, return a structured sample response
+            $result = [
+                'status' => 'success',
+                'message' => 'Test execution completed',
+                'data' => $this->generate_sample_data($connector_id, $action_id, $actions[$action_id]),
+                'execution_time' => '0.5s',
+                'test_mode' => false
+            ];
+
+            wp_send_json_success($result);
+
+        } catch (\Exception $e) {
+            wp_send_json_error('Test execution failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate sample data for testing purposes.
+     *
+     * @param string $connector_id Connector ID.
+     * @param string $action_id Action ID.
+     * @param array $action Action configuration.
+     *
+     * @return array Sample data.
+     */
+    private function generate_sample_data(string $connector_id, string $action_id, array $action): array
+    {
+        // Generate connector-specific sample data
+        switch ($connector_id) {
+            case 'openai':
+                return $this->generate_openai_sample($action_id);
+            case 'google_analytics':
+                return $this->generate_ga_sample($action_id);
+            case 'wordpress':
+                return $this->generate_wp_sample($action_id);
+            case 'ahrefs':
+                return $this->generate_ahrefs_sample($action_id);
+            default:
+                return $this->generate_generic_sample($action_id);
+        }
+    }
+
+    /**
+     * Generate OpenAI-specific sample data.
+     *
+     * @param string $action_id Action ID.
+     *
+     * @return array Sample data.
+     */
+    private function generate_openai_sample(string $action_id): array
+    {
+        switch ($action_id) {
+            case 'chat_completion':
+                return [
+                    'id' => 'chatcmpl-test123',
+                    'object' => 'chat.completion',
+                    'created' => time(),
+                    'model' => 'gpt-4',
+                    'choices' => [
+                        [
+                            'index' => 0,
+                            'message' => [
+                                'role' => 'assistant',
+                                'content' => 'This is a sample response from OpenAI.'
+                            ],
+                            'finish_reason' => 'stop'
+                        ]
+                    ],
+                    'usage' => [
+                        'prompt_tokens' => 20,
+                        'completion_tokens' => 12,
+                        'total_tokens' => 32
+                    ]
+                ];
+            case 'embeddings':
+                return [
+                    'object' => 'list',
+                    'data' => [
+                        [
+                            'object' => 'embedding',
+                            'embedding' => array_fill(0, 1536, 0.123456),
+                            'index' => 0
+                        ]
+                    ],
+                    'model' => 'text-embedding-ada-002',
+                    'usage' => [
+                        'prompt_tokens' => 8,
+                        'total_tokens' => 8
+                    ]
+                ];
+            default:
+                return ['content' => 'Sample OpenAI response'];
+        }
+    }
+
+    /**
+     * Generate Google Analytics sample data.
+     *
+     * @param string $action_id Action ID.
+     *
+     * @return array Sample data.
+     */
+    private function generate_ga_sample(string $action_id): array
+    {
+        return [
+            'reports' => [
+                [
+                    'columnHeader' => [
+                        'dimensions' => ['ga:date'],
+                        'metricHeader' => [
+                            'metricHeaderEntries' => [
+                                ['name' => 'ga:sessions', 'type' => 'INTEGER'],
+                                ['name' => 'ga:users', 'type' => 'INTEGER']
+                            ]
+                        ]
+                    ],
+                    'data' => [
+                        'rows' => [
+                            [
+                                'dimensions' => ['20240115'],
+                                'metrics' => [
+                                    ['values' => ['1234', '987']]
+                                ]
+                            ]
+                        ],
+                        'totals' => [
+                            ['values' => ['1234', '987']]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+    }
+
+    /**
+     * Generate WordPress sample data.
+     *
+     * @param string $action_id Action ID.
+     *
+     * @return array Sample data.
+     */
+    private function generate_wp_sample(string $action_id): array
+    {
+        switch ($action_id) {
+            case 'create_post':
+                return [
+                    'ID' => 123,
+                    'post_title' => 'Sample Post Title',
+                    'post_content' => 'Sample post content',
+                    'post_status' => 'publish',
+                    'post_type' => 'post',
+                    'post_author' => 1,
+                    'post_date' => current_time('mysql'),
+                    'guid' => home_url('/?p=123'),
+                    'post_name' => 'sample-post-title'
+                ];
+            case 'get_posts':
+                return [
+                    [
+                        'ID' => 123,
+                        'post_title' => 'Sample Post 1',
+                        'post_excerpt' => 'Sample excerpt...',
+                        'post_status' => 'publish',
+                        'post_date' => '2024-01-15 10:30:00'
+                    ],
+                    [
+                        'ID' => 124,
+                        'post_title' => 'Sample Post 2',
+                        'post_excerpt' => 'Another excerpt...',
+                        'post_status' => 'publish',
+                        'post_date' => '2024-01-14 15:45:00'
+                    ]
+                ];
+            default:
+                return ['success' => true, 'message' => 'WordPress action completed'];
+        }
+    }
+
+    /**
+     * Generate Ahrefs sample data.
+     *
+     * @param string $action_id Action ID.
+     *
+     * @return array Sample data.
+     */
+    private function generate_ahrefs_sample(string $action_id): array
+    {
+        return [
+            'domain' => 'example.com',
+            'ahrefs_rank' => 12345,
+            'domain_rating' => 65,
+            'backlinks' => 89543,
+            'referring_domains' => 2341,
+            'organic_keywords' => 45678,
+            'organic_traffic' => 123456
+        ];
+    }
+
+    /**
+     * Generate generic sample data.
+     *
+     * @param string $action_id Action ID.
+     *
+     * @return array Sample data.
+     */
+    private function generate_generic_sample(string $action_id): array
+    {
+        return [
+            'action_id' => $action_id,
+            'status' => 'success',
+            'timestamp' => current_time('c'),
+            'data' => [
+                'id' => 'sample_' . uniqid(),
+                'title' => 'Sample Data Title',
+                'description' => 'This is sample data for testing purposes',
+                'value' => 42,
+                'tags' => ['tag1', 'tag2', 'tag3'],
+                'metadata' => [
+                    'source' => 'test',
+                    'type' => 'sample',
+                    'priority' => 'normal'
+                ]
+            ]
+        ];
     }
 } 

@@ -690,6 +690,12 @@ class RyvrWorkflowBuilder {
             
             this.inspectorContent.innerHTML = `
                 <h3>${action.name}</h3>
+                <div class="ryvr-test-section">
+                    <button type="button" class="ryvr-btn ryvr-btn-primary test-node-btn" data-node-id="${nodeId}">
+                        🧪 Test Task
+                    </button>
+                    <div class="test-results" id="test-results-${nodeId}" style="display: none;"></div>
+                </div>
                 <div class="ryvr-inspector-form">
                     ${this.renderParameterForm(action, nodeData.parameters)}
                     ${this.renderJsonSchemaSection(nodeData)}
@@ -697,18 +703,26 @@ class RyvrWorkflowBuilder {
             `;
             
             this.bindParameterFormEvents(nodeId);
+            this.bindTestEvents(nodeId);
         }
     }
 
     showDataProcessingInspector(nodeData) {
         this.inspectorContent.innerHTML = `
             <h3>${nodeData.taskName}</h3>
+            <div class="ryvr-test-section">
+                <button type="button" class="ryvr-btn ryvr-btn-primary test-node-btn" data-node-id="${nodeData.id}">
+                    🧪 Test Task
+                </button>
+                <div class="test-results" id="test-results-${nodeData.id}" style="display: none;"></div>
+            </div>
             <div class="ryvr-inspector-form">
                 ${this.renderDataProcessingForm(nodeData)}
             </div>
         `;
         
         this.bindDataProcessingFormEvents(nodeData.id);
+        this.bindTestEvents(nodeData.id);
     }
 
     renderDataProcessingForm(nodeData) {
@@ -1119,11 +1133,335 @@ class RyvrWorkflowBuilder {
         }
     }
     
-    updateNodeParameter(nodeId, paramName, value) {
+        updateNodeParameter(nodeId, paramName, value) {
         const nodeData = this.nodes.get(nodeId);
         nodeData.parameters[paramName] = value;
     }
-    
+
+    bindTestEvents(nodeId) {
+        const testBtn = this.inspectorContent.querySelector('.test-node-btn');
+        if (testBtn) {
+            testBtn.addEventListener('click', () => {
+                this.testNode(nodeId);
+            });
+        }
+    }
+
+    async testNode(nodeId) {
+        const nodeData = this.nodes.get(nodeId);
+        const testBtn = this.inspectorContent.querySelector('.test-node-btn');
+        const resultsContainer = document.getElementById(`test-results-${nodeId}`);
+        
+        if (!testBtn || !resultsContainer) return;
+        
+        // Show loading state
+        testBtn.disabled = true;
+        testBtn.innerHTML = '⏳ Testing...';
+        resultsContainer.style.display = 'block';
+        resultsContainer.innerHTML = '<p>Running test...</p>';
+        
+        try {
+            let result;
+            
+            if (nodeData.type === 'data_processing') {
+                result = await this.testDataProcessingNode(nodeData);
+            } else {
+                result = await this.testConnectorNode(nodeData);
+            }
+            
+            // Store test result for field mapping
+            nodeData.lastTestResult = result;
+            
+            // Display results
+            this.displayTestResults(nodeId, result);
+            
+        } catch (error) {
+            console.error('Test failed:', error);
+            resultsContainer.innerHTML = `
+                <div class="test-error">
+                    <h4>❌ Test Failed</h4>
+                    <p>${error.message}</p>
+                </div>
+            `;
+        } finally {
+            // Reset button
+            testBtn.disabled = false;
+            testBtn.innerHTML = '🧪 Test Task';
+        }
+    }
+
+    async testConnectorNode(nodeData) {
+        const connector = this.connectors[nodeData.connectorId];
+        const action = connector.actions[nodeData.actionId];
+        
+        // Prepare test data
+        const testPayload = {
+            action: 'ryvr_test_task',
+            nonce: window.ryvrWorkflowBuilder.nonce,
+            connector_id: nodeData.connectorId,
+            action_id: nodeData.actionId,
+            parameters: nodeData.parameters || {},
+            test_mode: true
+        };
+        
+        const response = await fetch(window.ryvrWorkflowBuilder.ajax_url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(testPayload)
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.data || 'Test execution failed');
+        }
+        
+        return result.data;
+    }
+
+    async testDataProcessingNode(nodeData) {
+        // For data processing nodes, we need sample input data
+        // Try to get it from connected source nodes
+        const sourceData = this.getSourceNodeTestData(nodeData.id);
+        
+        // Simulate data processing based on task type
+        switch (nodeData.taskId) {
+            case 'data_filter':
+                return this.simulateDataFilter(sourceData, nodeData.parameters);
+            case 'data_transform':
+                return this.simulateDataTransform(sourceData, nodeData.parameters);
+            case 'data_mapper':
+                return this.simulateDataMapper(sourceData, nodeData.parameters);
+            case 'data_validator':
+                return this.simulateDataValidator(sourceData, nodeData.parameters);
+            case 'decision_node':
+                return this.simulateDecisionNode(sourceData, nodeData.parameters);
+            case 'delay_node':
+                return this.simulateDelayNode(sourceData, nodeData.parameters);
+            default:
+                throw new Error('Unknown data processing task type');
+        }
+    }
+
+    getSourceNodeTestData(nodeId) {
+        // Find connected source nodes that have test results
+        for (const [connectionId, connection] of this.connections) {
+            if (connection.target === nodeId) {
+                const sourceNode = this.nodes.get(connection.source);
+                if (sourceNode && sourceNode.lastTestResult) {
+                    return sourceNode.lastTestResult;
+                }
+            }
+        }
+        
+        // Return sample data if no source found
+        return {
+            sample_field: 'sample_value',
+            status: 'active',
+            count: 42,
+            created_at: '2024-01-15T10:30:00Z',
+            tags: ['tag1', 'tag2'],
+            metadata: {
+                source: 'test',
+                priority: 'high'
+            }
+        };
+    }
+
+    simulateDataFilter(data, parameters) {
+        const conditions = parameters.conditions || [];
+        const operator = parameters.operator || 'and';
+        
+        // Simple simulation - just return filtered indication
+        return {
+            filtered: true,
+            operator: operator,
+            conditions_applied: conditions.length,
+            sample_result: data,
+            output_fields: Object.keys(data)
+        };
+    }
+
+    simulateDataTransform(data, parameters) {
+        const transformations = parameters.transformations || [];
+        const transformedData = { ...data };
+        
+        // Apply sample transformations
+        transformations.forEach(transform => {
+            if (transform.field && transformedData[transform.field]) {
+                switch (transform.function) {
+                    case 'uppercase':
+                        transformedData[transform.field] = String(transformedData[transform.field]).toUpperCase();
+                        break;
+                    case 'lowercase':
+                        transformedData[transform.field] = String(transformedData[transform.field]).toLowerCase();
+                        break;
+                    case 'trim':
+                        transformedData[transform.field] = String(transformedData[transform.field]).trim();
+                        break;
+                }
+            }
+        });
+        
+        return {
+            transformed: true,
+            transformations_applied: transformations.length,
+            sample_result: transformedData,
+            output_fields: Object.keys(transformedData)
+        };
+    }
+
+    simulateDataMapper(data, parameters) {
+        const mappings = parameters.mappings || [];
+        const mappedData = {};
+        
+        mappings.forEach(mapping => {
+            if (mapping.source && mapping.target && data[mapping.source]) {
+                mappedData[mapping.target] = data[mapping.source];
+            }
+        });
+        
+        return {
+            mapped: true,
+            mappings_applied: mappings.length,
+            sample_result: mappedData,
+            output_fields: Object.keys(mappedData)
+        };
+    }
+
+    simulateDataValidator(data, parameters) {
+        const rules = parameters.rules || [];
+        const validationResults = [];
+        
+        rules.forEach(rule => {
+            validationResults.push({
+                field: rule.field,
+                rule: rule.rule,
+                valid: Math.random() > 0.2 // Simulate 80% pass rate
+            });
+        });
+        
+        return {
+            validated: true,
+            rules_applied: rules.length,
+            validation_results: validationResults,
+            sample_result: data,
+            output_fields: Object.keys(data)
+        };
+    }
+
+    simulateDecisionNode(data, parameters) {
+        const condition = parameters.condition || 'true';
+        const result = Math.random() > 0.5; // Random decision for demo
+        
+        return {
+            decision: true,
+            condition: condition,
+            result: result,
+            path_taken: result ? (parameters.true_path || 'Yes') : (parameters.false_path || 'No'),
+            sample_result: data,
+            output_fields: Object.keys(data)
+        };
+    }
+
+    simulateDelayNode(data, parameters) {
+        const duration = parameters.duration || 1000;
+        const unit = parameters.unit || 'milliseconds';
+        
+        return {
+            delayed: true,
+            duration: duration,
+            unit: unit,
+            sample_result: data,
+            output_fields: Object.keys(data)
+        };
+    }
+
+    displayTestResults(nodeId, result) {
+        const resultsContainer = document.getElementById(`test-results-${nodeId}`);
+        if (!resultsContainer) return;
+        
+        const resultHtml = `
+            <div class="test-success">
+                <h4>✅ Test Successful</h4>
+                <div class="test-data">
+                    <h5>Output Data Structure:</h5>
+                    <pre class="json-output">${JSON.stringify(result, null, 2)}</pre>
+                </div>
+                <div class="available-fields">
+                    <h5>Available Fields for Mapping:</h5>
+                    <div class="field-list">
+                        ${this.getAvailableFields(result).map(field => 
+                            `<span class="field-tag" data-field="${field}">${field}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+                <button type="button" class="ryvr-btn ryvr-btn-secondary refresh-connections-btn" data-node-id="${nodeId}">
+                    🔄 Update Field Mappings
+                </button>
+            </div>
+        `;
+        
+        resultsContainer.innerHTML = resultHtml;
+        
+        // Bind refresh connections button
+        const refreshBtn = resultsContainer.querySelector('.refresh-connections-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.refreshConnectionMappings(nodeId);
+            });
+        }
+        
+        // Make field tags draggable for easy mapping
+        resultsContainer.querySelectorAll('.field-tag').forEach(tag => {
+            tag.draggable = true;
+            tag.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', tag.dataset.field);
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+        });
+    }
+
+    getAvailableFields(data, prefix = '') {
+        const fields = [];
+        
+        if (typeof data === 'object' && data !== null) {
+            for (const [key, value] of Object.entries(data)) {
+                const fieldName = prefix ? `${prefix}.${key}` : key;
+                fields.push(fieldName);
+                
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    fields.push(...this.getAvailableFields(value, fieldName));
+                }
+            }
+        }
+        
+        return fields.sort();
+    }
+
+    refreshConnectionMappings(nodeId) {
+        // Update all outgoing connections to show available source fields
+        for (const [connectionId, connection] of this.connections) {
+            if (connection.source === nodeId) {
+                this.updateConnectionFieldOptions(connectionId);
+            }
+        }
+        
+        alert('Connection field mappings updated! Check the connection inspectors.');
+    }
+
+    updateConnectionFieldOptions(connectionId) {
+        const connection = this.connections.get(connectionId);
+        const sourceNode = this.nodes.get(connection.source);
+        
+        if (sourceNode && sourceNode.lastTestResult) {
+            const availableFields = this.getAvailableFields(sourceNode.lastTestResult);
+            connection.availableSourceFields = availableFields;
+        }
+    }
+
     initializeJsonSchema(nodeId) {
         const nodeData = this.nodes.get(nodeId);
         nodeData.jsonSchema = {
@@ -1370,8 +1708,6 @@ class RyvrWorkflowBuilder {
         
         this.connections.set(connectionId, connectionData);
         this.renderConnection(connectionData);
-        
-        console.log('Connection created:', connectionData);
     }
     
     renderConnection(connectionData) {
@@ -1404,13 +1740,6 @@ class RyvrWorkflowBuilder {
         
         const line = this.createConnectionLine(startX, startY, endX, endY, false, connectionId);
         this.connectionsSvg.appendChild(line);
-        
-        console.log('Connection line created and added to SVG:', {
-            connectionId,
-            coordinates: { startX, startY, endX, endY },
-            svgElement: this.connectionsSvg,
-            lineElement: line
-        });
     }
     
     createConnectionLine(startX, startY, endX, endY, isTemp = false, connectionId = null) {
@@ -1469,25 +1798,71 @@ class RyvrWorkflowBuilder {
         const sourceNode = this.nodes.get(connectionData.source);
         const targetNode = this.nodes.get(connectionData.target);
         
+        // Get available fields from source node if tested
+        const sourceFields = connectionData.availableSourceFields || 
+                            (sourceNode.lastTestResult ? this.getAvailableFields(sourceNode.lastTestResult) : []);
+        
+        const sourceFieldsHtml = sourceFields.length > 0 ? 
+            `<div class="available-source-fields">
+                <h5>Available Source Fields:</h5>
+                <div class="field-list">
+                    ${sourceFields.map(field => 
+                        `<span class="field-tag draggable" data-field="${field}" draggable="true">${field}</span>`
+                    ).join('')}
+                </div>
+            </div>` : 
+            `<div class="no-source-fields">
+                <p>No source fields available. Test the source task first to see available fields.</p>
+            </div>`;
+        
+        const currentMappings = connectionData.mapping || {};
+        const mappingsHtml = Object.keys(currentMappings).length > 0 ?
+            `<div class="current-mappings">
+                <h5>Current Field Mappings:</h5>
+                <div class="mappings-list">
+                    ${Object.entries(currentMappings).map(([source, target]) => 
+                        `<div class="mapping-row">
+                            <span class="source-field">${source}</span>
+                            <span class="arrow">→</span>
+                            <span class="target-field">${target}</span>
+                            <button class="remove-mapping" data-source="${source}">×</button>
+                        </div>`
+                    ).join('')}
+                </div>
+            </div>` : '';
+        
         this.inspectorContent.innerHTML = `
             <h3>Connection</h3>
             <div class="connection-info">
-                <p><strong>From:</strong> ${sourceNode.actionId}</p>
-                <p><strong>To:</strong> ${targetNode.actionId}</p>
+                <p><strong>From:</strong> ${sourceNode.actionId || sourceNode.taskName}</p>
+                <p><strong>To:</strong> ${targetNode.actionId || targetNode.taskName}</p>
             </div>
             <div class="data-mapping">
                 <h4>Data Mapping</h4>
-                <p>Configure how data flows between these tasks:</p>
+                ${sourceFieldsHtml}
+                ${mappingsHtml}
+                <div class="mapping-tools">
+                    <h5>Add Field Mapping:</h5>
+                    <div class="mapping-form">
+                        <input type="text" id="source-field-input" placeholder="Source field" list="source-fields-list">
+                        <datalist id="source-fields-list">
+                            ${sourceFields.map(field => `<option value="${field}">${field}</option>`).join('')}
+                        </datalist>
+                        <span>→</span>
+                        <input type="text" id="target-field-input" placeholder="Target field">
+                        <button class="ryvr-btn ryvr-btn-primary" id="add-mapping-btn">Add</button>
+                    </div>
+                </div>
                 <div class="mapping-controls">
-                    <button class="ryvr-btn ryvr-btn-secondary" onclick="ryvrWorkflowBuilderInstance.openMappingModal('${connectionId}')">
-                        Configure Mapping
-                    </button>
                     <button class="ryvr-btn ryvr-btn-danger" onclick="ryvrWorkflowBuilderInstance.deleteConnection('${connectionId}')">
                         Delete Connection
                     </button>
                 </div>
             </div>
         `;
+        
+        // Bind events for field mapping
+        this.bindConnectionMappingEvents(connectionId);
     }
     
     deleteConnection(connectionId) {
@@ -1506,9 +1881,87 @@ class RyvrWorkflowBuilder {
         }
     }
     
+    bindConnectionMappingEvents(connectionId) {
+        const addBtn = this.inspectorContent.querySelector('#add-mapping-btn');
+        const sourceInput = this.inspectorContent.querySelector('#source-field-input');
+        const targetInput = this.inspectorContent.querySelector('#target-field-input');
+        
+        if (addBtn && sourceInput && targetInput) {
+            addBtn.addEventListener('click', () => {
+                const sourceField = sourceInput.value.trim();
+                const targetField = targetInput.value.trim();
+                
+                if (sourceField && targetField) {
+                    this.addFieldMapping(connectionId, sourceField, targetField);
+                    sourceInput.value = '';
+                    targetInput.value = '';
+                    this.showConnectionInspector(connectionId); // Refresh the view
+                }
+            });
+            
+            // Allow Enter key to add mapping
+            [sourceInput, targetInput].forEach(input => {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        addBtn.click();
+                    }
+                });
+            });
+        }
+        
+        // Bind remove mapping buttons
+        this.inspectorContent.querySelectorAll('.remove-mapping').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sourceField = btn.getAttribute('data-source');
+                this.removeFieldMapping(connectionId, sourceField);
+                this.showConnectionInspector(connectionId); // Refresh the view
+            });
+        });
+        
+        // Make field tags draggable and bind drag events
+        this.inspectorContent.querySelectorAll('.field-tag.draggable').forEach(tag => {
+            tag.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', tag.dataset.field);
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+        });
+        
+        // Make target input accept dropped fields
+        if (targetInput) {
+            targetInput.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+            });
+            
+            targetInput.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const fieldName = e.dataTransfer.getData('text/plain');
+                if (fieldName) {
+                    sourceInput.value = fieldName;
+                    targetInput.focus();
+                }
+            });
+        }
+    }
+
+    addFieldMapping(connectionId, sourceField, targetField) {
+        const connection = this.connections.get(connectionId);
+        if (!connection.mapping) {
+            connection.mapping = {};
+        }
+        connection.mapping[sourceField] = targetField;
+    }
+
+    removeFieldMapping(connectionId, sourceField) {
+        const connection = this.connections.get(connectionId);
+        if (connection.mapping && connection.mapping[sourceField]) {
+            delete connection.mapping[sourceField];
+        }
+    }
+
     openMappingModal(connectionId) {
-        // TODO: Implement data mapping modal
-        alert('Data mapping configuration coming soon!');
+        // This method is now replaced by the inline mapping interface
+        this.showConnectionInspector(connectionId);
     }
 }
 
