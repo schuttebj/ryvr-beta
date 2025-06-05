@@ -406,20 +406,22 @@
     cursor: crosshair;
     z-index: 10;
     transition: all 0.2s ease;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .ryvr-handle.source {
     right: -6px;
     top: 50%;
     transform: translateY(-50%);
-    background: var(--ryvr-accent);
+    background: #3b82f6;
 }
 
 .ryvr-handle.target {
     left: -6px;
     top: 50%;
     transform: translateY(-50%);
-    background: var(--ryvr-secondary);
+    background: #10b981;
 }
 
 .ryvr-handle .handle-dot {
@@ -427,12 +429,45 @@
     height: 100%;
     border-radius: 50%;
     background: currentColor;
-    border: 2px solid var(--ryvr-white);
+    border: 2px solid white;
     box-sizing: border-box;
 }
 
 .ryvr-handle:hover {
-    transform: translateY(-50%) scale(1.2);
+    transform: translateY(-50%) scale(1.3);
+    z-index: 15;
+}
+
+.ryvr-handle.source:hover::after {
+    content: "Click and drag to connect";
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    margin-right: 8px;
+    z-index: 20;
+}
+
+.ryvr-handle.target:hover::after {
+    content: "Drop connection here";
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    margin-left: 8px;
+    z-index: 20;
 }
 
 .ryvr-handle.connection-target {
@@ -478,6 +513,11 @@
 .ryvr-workflow-builder.connecting .ryvr-handle.target {
     opacity: 1;
     animation: pulse 1s ease-in-out infinite;
+    transform: translateY(-50%) scale(1.2);
+}
+
+.ryvr-workflow-builder.connecting .ryvr-canvas {
+    cursor: crosshair;
 }
 
 @keyframes pulse {
@@ -540,13 +580,14 @@
 }
 
 .ryvr-handle {
-    opacity: 0.6;
-    visibility: hidden;
+    opacity: 0.8;
+    visibility: visible;
 }
 
 .ryvr-node.selected .ryvr-handle {
     opacity: 1;
     visibility: visible;
+    transform: translateY(-50%) scale(1.1);
 }
 
 /* Inspector Panel */

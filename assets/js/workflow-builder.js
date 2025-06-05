@@ -65,7 +65,7 @@ class RyvrWorkflowBuilder {
         this.sidebarElement = this.container.querySelector('.ryvr-sidebar');
         this.canvasElement = this.container.querySelector('.ryvr-canvas');
         this.nodesContainer = this.container.querySelector('.ryvr-nodes-container');
-        this.connectionsSpg = this.container.querySelector('.ryvr-connections-svg');
+        this.connectionsSvg = this.container.querySelector('.ryvr-connections-svg');
         this.inspectorElement = this.container.querySelector('.ryvr-inspector');
         this.inspectorContent = this.container.querySelector('.ryvr-inspector-content');
     }
@@ -443,6 +443,9 @@ class RyvrWorkflowBuilder {
         this.makeNodeDraggable(nodeElement, nodeData);
         
         this.nodesContainer.appendChild(nodeElement);
+        
+        // Debug log
+        console.log('Regular node rendered with handles:', nodeElement.querySelectorAll('.ryvr-handle').length);
     }
 
     renderDataProcessingNode(nodeData) {
@@ -491,6 +494,9 @@ class RyvrWorkflowBuilder {
         this.makeNodeDraggable(nodeElement, nodeData);
         
         this.nodesContainer.appendChild(nodeElement);
+        
+        // Debug log
+        console.log('Data processing node rendered with handles:', nodeElement.querySelectorAll('.ryvr-handle').length);
     }
 
     getTaskIcon(taskId) {
@@ -1147,16 +1153,20 @@ class RyvrWorkflowBuilder {
     
     setupConnectionHandles(nodeElement) {
         const handles = nodeElement.querySelectorAll('.ryvr-handle');
+        console.log('Setting up connection handles for node:', nodeElement.getAttribute('data-node-id'), 'handles found:', handles.length);
         
         handles.forEach(handle => {
             handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
                 e.stopPropagation();
+                console.log('Handle mousedown:', handle.getAttribute('data-handle-type'));
                 this.startConnection(e, handle);
             });
             
             handle.addEventListener('mouseenter', (e) => {
                 if (this.isConnecting && this.connectionStart) {
                     handle.classList.add('connection-target');
+                    console.log('Handle entered during connection');
                 }
             });
             
@@ -1165,10 +1175,16 @@ class RyvrWorkflowBuilder {
             });
             
             handle.addEventListener('mouseup', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 if (this.isConnecting) {
+                    console.log('Completing connection to:', handle.getAttribute('data-handle-type'));
                     this.completeConnection(e, handle);
                 }
             });
+            
+            // Add visual feedback
+            handle.style.pointerEvents = 'auto';
         });
     }
     
@@ -1176,8 +1192,13 @@ class RyvrWorkflowBuilder {
         const handleType = handle.getAttribute('data-handle-type');
         const nodeId = handle.getAttribute('data-node-id');
         
+        console.log('Starting connection from:', nodeId, 'handle type:', handleType);
+        
         // Only start connections from source handles
-        if (handleType !== 'source') return;
+        if (handleType !== 'source') {
+            console.log('Connection only starts from source handles');
+            return;
+        }
         
         this.isConnecting = true;
         this.connectionStart = {
@@ -1185,6 +1206,8 @@ class RyvrWorkflowBuilder {
             handle: handle,
             type: handleType
         };
+        
+        console.log('Connection started successfully');
         
         // Add temporary connection line that follows mouse
         document.addEventListener('mousemove', this.handleConnectionDrag.bind(this));
@@ -1212,7 +1235,7 @@ class RyvrWorkflowBuilder {
         const endY = e.clientY - canvasRect.top;
         
         this.tempConnection = this.createConnectionLine(startX, startY, endX, endY, true);
-        this.connectionsSpg.appendChild(this.tempConnection);
+        this.connectionsSvg.appendChild(this.tempConnection);
     }
     
     completeConnection(e, targetHandle) {
@@ -1292,7 +1315,7 @@ class RyvrWorkflowBuilder {
     
     updateConnectionLine(connectionId, sourceHandle, targetHandle) {
         // Remove existing line
-        const existingLine = this.connectionsSpg.querySelector(`[data-connection-id="${connectionId}"]`);
+        const existingLine = this.connectionsSvg.querySelector(`[data-connection-id="${connectionId}"]`);
         if (existingLine) {
             existingLine.remove();
         }
@@ -1307,7 +1330,7 @@ class RyvrWorkflowBuilder {
         const endY = targetRect.top + targetRect.height / 2 - canvasRect.top;
         
         const line = this.createConnectionLine(startX, startY, endX, endY, false, connectionId);
-        this.connectionsSpg.appendChild(line);
+        this.connectionsSvg.appendChild(line);
     }
     
     createConnectionLine(startX, startY, endX, endY, isTemp = false, connectionId = null) {
