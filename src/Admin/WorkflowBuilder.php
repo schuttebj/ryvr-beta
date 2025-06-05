@@ -26,6 +26,8 @@ class WorkflowBuilder
         add_action('wp_ajax_ryvr_get_sample_workflows', [$this, 'get_sample_workflows']);
         add_action('wp_ajax_ryvr_save_workflow', [$this, 'save_workflow']);
         add_action('wp_ajax_ryvr_load_workflow', [$this, 'load_workflow']);
+        add_action('wp_ajax_ryvr_get_connector_output_schema', [$this, 'get_connector_output_schema']);
+        add_action('wp_ajax_ryvr_get_connector_input_schema', [$this, 'get_connector_input_schema']);
         
         // Add debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -88,10 +90,27 @@ class WorkflowBuilder
             RYVR_VERSION
         );
 
+        // Enqueue field mapping styles
+        wp_enqueue_style(
+            'ryvr-field-mapping',
+            RYVR_PLUGIN_URL . 'assets/css/field-mapping.css',
+            ['ryvr-admin'],
+            RYVR_VERSION
+        );
+
         wp_enqueue_script(
             'ryvr-workflow-builder',
             RYVR_PLUGIN_URL . 'assets/js/workflow-builder.js',
             ['jquery'],
+            RYVR_VERSION,
+            true
+        );
+
+        // Enqueue field mapping functionality
+        wp_enqueue_script(
+            'ryvr-field-mapping',
+            RYVR_PLUGIN_URL . 'assets/js/field-mapping.js',
+            ['jquery', 'ryvr-workflow-builder'],
             RYVR_VERSION,
             true
         );
@@ -719,6 +738,137 @@ class WorkflowBuilder
 
         } catch (\Exception $e) {
             wp_send_json_error('Database error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get connector output schema for field mapping.
+     *
+     * @return void
+     */
+    public function get_connector_output_schema(): void
+    {
+        check_ajax_referer('ryvr_workflow_builder', 'nonce');
+
+        $connector_id = sanitize_text_field($_POST['connector_id'] ?? '');
+        $action_id = sanitize_text_field($_POST['action_id'] ?? '');
+
+        if (empty($connector_id) || empty($action_id)) {
+            wp_send_json_error('Missing connector ID or action ID');
+            return;
+        }
+
+        try {
+            $connector_manager = new \Ryvr\Connectors\Manager();
+            $connector = $connector_manager->get_connector($connector_id);
+
+            if (!$connector) {
+                wp_send_json_error('Connector not found');
+                return;
+            }
+
+            $actions = $connector->get_actions();
+            if (!isset($actions[$action_id])) {
+                wp_send_json_error('Action not found');
+                return;
+            }
+
+            $action = $actions[$action_id];
+            $output_schema = $action['output_schema'] ?? [];
+
+            // If output schema is available, extract field types
+            if (!empty($output_schema) && isset($output_schema['properties'])) {
+                $fields = [];
+                $this->extract_schema_fields($output_schema['properties'], $fields);
+                wp_send_json_success($fields);
+            } else {
+                // Default fallback schema
+                wp_send_json_success([
+                    'data' => 'object',
+                    'status' => 'string',
+                    'message' => 'string',
+                    'success' => 'boolean'
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            wp_send_json_error('Error getting output schema: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get connector input schema for field mapping.
+     *
+     * @return void
+     */
+    public function get_connector_input_schema(): void
+    {
+        check_ajax_referer('ryvr_workflow_builder', 'nonce');
+
+        $connector_id = sanitize_text_field($_POST['connector_id'] ?? '');
+        $action_id = sanitize_text_field($_POST['action_id'] ?? '');
+
+        if (empty($connector_id) || empty($action_id)) {
+            wp_send_json_error('Missing connector ID or action ID');
+            return;
+        }
+
+        try {
+            $connector_manager = new \Ryvr\Connectors\Manager();
+            $connector = $connector_manager->get_connector($connector_id);
+
+            if (!$connector) {
+                wp_send_json_error('Connector not found');
+                return;
+            }
+
+            $actions = $connector->get_actions();
+            if (!isset($actions[$action_id])) {
+                wp_send_json_error('Action not found');
+                return;
+            }
+
+            $action = $actions[$action_id];
+            $fields = $action['fields'] ?? [];
+
+            // Convert action fields to schema format
+            $input_fields = [];
+            foreach ($fields as $field_id => $field_config) {
+                $field_type = $field_config['type'] ?? 'string';
+                $input_fields[$field_id] = $field_type;
+            }
+
+            wp_send_json_success($input_fields);
+
+        } catch (\Exception $e) {
+            wp_send_json_error('Error getting input schema: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Extract fields from schema properties recursively.
+     *
+     * @param array $properties Schema properties.
+     * @param array &$fields Fields array to populate.
+     * @param string $prefix Field prefix for nested properties.
+     *
+     * @return void
+     */
+    private function extract_schema_fields(array $properties, array &$fields, string $prefix = ''): void
+    {
+        foreach ($properties as $property_name => $property_config) {
+            $field_name = $prefix ? $prefix . '.' . $property_name : $property_name;
+            $field_type = $property_config['type'] ?? 'string';
+
+            if ($field_type === 'object' && isset($property_config['properties'])) {
+                // Recursively extract nested object properties
+                $this->extract_schema_fields($property_config['properties'], $fields, $field_name);
+            } elseif ($field_type === 'array' && isset($property_config['items']['properties'])) {
+                // Handle array of objects
+                $this->extract_schema_fields($property_config['items']['properties'], $fields, $field_name . '[]');
+            } else {
+                $fields[$field_name] = $field_type;
+            }
         }
     }
 } 

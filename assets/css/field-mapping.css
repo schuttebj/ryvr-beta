@@ -1,0 +1,487 @@
+/* Field Mapping Modal Styles */
+
+.ryvr-field-mapping-content {
+    width: 90vw;
+    max-width: 1200px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.ryvr-mapping-info {
+    background: #f0f0f1;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.ryvr-step-info {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.ryvr-source-step,
+.ryvr-target-step {
+    text-align: center;
+}
+
+.ryvr-step-details {
+    margin-bottom: 15px;
+}
+
+.step-name {
+    font-weight: bold;
+    font-size: 16px;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.step-type {
+    color: #666;
+    font-size: 14px;
+    background: #f0f0f1;
+    padding: 2px 8px;
+    border-radius: 12px;
+    display: inline-block;
+}
+
+.ryvr-mapping-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #2271b1;
+}
+
+.ryvr-fields-list {
+    text-align: left;
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    background: #fafafa;
+}
+
+.ryvr-field-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.ryvr-field-item:last-child {
+    border-bottom: none;
+}
+
+.field-name {
+    font-weight: 500;
+    font-family: monospace;
+}
+
+.field-type {
+    color: #666;
+    font-size: 12px;
+    background: #e0e0e0;
+    padding: 1px 6px;
+    border-radius: 3px;
+}
+
+.field-required {
+    color: #d63638;
+    font-weight: bold;
+}
+
+.ryvr-use-field {
+    color: #2271b1;
+    font-size: 12px;
+}
+
+/* Field Mapping Configuration */
+
+.ryvr-mapping-configuration,
+.ryvr-transformation-section,
+.ryvr-validation-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.ryvr-mapping-header,
+.ryvr-transformation-header,
+.ryvr-validation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.ryvr-mapping-list,
+.ryvr-transformation-list,
+.ryvr-validation-list {
+    space-y: 10px;
+}
+
+.ryvr-mapping-row,
+.ryvr-transformation-row,
+.ryvr-validation-row {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 10px;
+}
+
+.ryvr-mapping-fields {
+    display: grid;
+    grid-template-columns: 2fr auto 2fr auto;
+    gap: 15px;
+    align-items: end;
+    margin-bottom: 10px;
+}
+
+.ryvr-source-field,
+.ryvr-target-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.ryvr-source-field label,
+.ryvr-target-field label {
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.field-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.field-input-container input {
+    flex: 1;
+    padding-right: 30px;
+}
+
+.ryvr-browse-source-fields,
+.ryvr-browse-target-fields {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.ryvr-browse-source-fields:hover,
+.ryvr-browse-target-fields:hover {
+    color: #2271b1;
+}
+
+.ryvr-mapping-operator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #2271b1;
+    margin-top: 20px;
+}
+
+.ryvr-mapping-actions {
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.ryvr-remove-mapping,
+.ryvr-remove-transformation,
+.ryvr-remove-validation {
+    color: #d63638;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 3px;
+}
+
+.ryvr-remove-mapping:hover,
+.ryvr-remove-transformation:hover,
+.ryvr-remove-validation:hover {
+    background: #d63638;
+    color: #fff;
+}
+
+.ryvr-mapping-options {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.ryvr-mapping-options label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+}
+
+.ryvr-default-value {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ryvr-default-value label {
+    white-space: nowrap;
+}
+
+.ryvr-default-value input {
+    min-width: 150px;
+}
+
+/* Transformation Styles */
+
+.ryvr-transformation-row {
+    display: grid;
+    grid-template-columns: 2fr 2fr 3fr auto;
+    gap: 15px;
+    align-items: end;
+}
+
+.ryvr-transformation-field,
+.ryvr-transformation-function,
+.ryvr-transformation-params,
+.ryvr-transformation-actions {
+    display: flex;
+    flex-direction: column;
+}
+
+.ryvr-transformation-actions {
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 20px;
+}
+
+/* Validation Styles */
+
+.ryvr-validation-row {
+    display: grid;
+    grid-template-columns: 2fr 2fr 2fr 3fr auto;
+    gap: 15px;
+    align-items: end;
+}
+
+.ryvr-validation-field,
+.ryvr-validation-rule,
+.ryvr-validation-params,
+.ryvr-validation-message,
+.ryvr-validation-actions {
+    display: flex;
+    flex-direction: column;
+}
+
+.ryvr-validation-actions {
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 20px;
+}
+
+/* Preview Section */
+
+.ryvr-mapping-preview {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.ryvr-preview-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.ryvr-sample-data,
+.ryvr-preview-result {
+    display: flex;
+    flex-direction: column;
+}
+
+.ryvr-sample-data h5,
+.ryvr-preview-result h5 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.ryvr-code-editor {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    min-height: 100px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background: #fff;
+}
+
+.ryvr-preview-output {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    min-height: 100px;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
+
+.ryvr-test-mapping {
+    align-self: flex-start;
+}
+
+/* Modal Footer */
+
+.ryvr-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+    margin-top: 20px;
+}
+
+/* Responsive Design */
+
+@media (max-width: 768px) {
+    .ryvr-field-mapping-content {
+        width: 95vw;
+    }
+    
+    .ryvr-step-info {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .ryvr-mapping-arrow {
+        transform: rotate(90deg);
+    }
+    
+    .ryvr-mapping-fields {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .ryvr-mapping-operator {
+        transform: rotate(90deg);
+        margin: 10px 0;
+    }
+    
+    .ryvr-transformation-row,
+    .ryvr-validation-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .ryvr-preview-content {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+}
+
+/* Notification Styles */
+
+.ryvr-notification {
+    position: fixed;
+    top: 32px;
+    right: 20px;
+    z-index: 999999;
+    min-width: 300px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Field mapping specific connection styles */
+
+.ryvr-connection-line {
+    cursor: pointer;
+    stroke-width: 2;
+    transition: stroke-width 0.2s ease;
+}
+
+.ryvr-connection-line:hover {
+    stroke-width: 3;
+}
+
+.ryvr-connection-configure {
+    background: #2271b1;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    cursor: pointer;
+    position: absolute;
+    transform: translate(-50%, -50%);
+}
+
+.ryvr-connection-configure:hover {
+    background: #135e96;
+}
+
+/* Enhanced form styling */
+
+.ryvr-mapping-row input,
+.ryvr-mapping-row select,
+.ryvr-transformation-row input,
+.ryvr-transformation-row select,
+.ryvr-validation-row input,
+.ryvr-validation-row select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.ryvr-mapping-row label,
+.ryvr-transformation-row label,
+.ryvr-validation-row label {
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: #333;
+    font-size: 13px;
+}
+
+/* Status indicators */
+
+.ryvr-field-mapped {
+    background: #d1edff;
+    border-left: 3px solid #2271b1;
+}
+
+.ryvr-field-required-unmapped {
+    background: #fff2cd;
+    border-left: 3px solid #f1c40f;
+}
+
+.ryvr-field-error {
+    background: #ffeaea;
+    border-left: 3px solid #d63638;
+} 

@@ -1485,6 +1485,12 @@ jQuery(document).ready(function($) {
         workflowData.name = $('#workflow-name').val();
         workflowData.description = $('#workflow-description').val();
     });
+    
+    // Initialize field mapping modal
+    $('.ryvr-workflow-editor').append('<?php 
+        $field_mapping_modal = new \Ryvr\Admin\FieldMappingModal();
+        echo str_replace(array("\r", "\n"), '', addslashes($field_mapping_modal->render_modal()));
+    ?>');
 
     // Keyboard shortcuts
     $(document).on('keydown', function(e) {
