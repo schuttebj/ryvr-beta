@@ -27,10 +27,10 @@ class RyvrWorkflowBuilder {
         this.loadConnectors();
         this.loadAvailableModels();
         
-        // Test SVG rendering after a short delay
-        setTimeout(() => {
-            this.testSVGRendering();
-        }, 1000);
+        // Test SVG rendering disabled - connections working!
+        // setTimeout(() => {
+        //     this.testSVGRendering();
+        // }, 1000);
     }
     
     testSVGRendering() {
@@ -96,9 +96,9 @@ class RyvrWorkflowBuilder {
                     <svg class="ryvr-connections-svg" width="100%" height="100%" 
                          style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1;">
                         <defs>
-                            <marker id="arrowhead" markerWidth="10" markerHeight="7" 
-                                    refX="10" refY="3.5" orient="auto">
-                                <polygon points="0 0, 10 3.5, 0 7" 
+                            <marker id="arrowhead" markerWidth="6" markerHeight="4" 
+                                    refX="6" refY="2" orient="auto">
+                                <polygon points="0 0, 6 2, 0 4" 
                                          fill="#3b82f6" />
                             </marker>
                         </defs>
@@ -1425,8 +1425,6 @@ class RyvrWorkflowBuilder {
         
         const pathData = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
         
-        console.log('Creating path with data:', pathData);
-        
         line.setAttribute('d', pathData);
         line.setAttribute('stroke', isTemp ? '#ff6b6b' : '#3b82f6');
         line.setAttribute('stroke-width', isTemp ? '2' : '3');
@@ -1447,8 +1445,6 @@ class RyvrWorkflowBuilder {
         } else if (isTemp) {
             line.classList.add('temp-connection');
         }
-        
-        console.log('Created line element:', line);
         return line;
     }
     
